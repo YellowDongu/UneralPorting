@@ -5,11 +5,12 @@
 *.fbx
 *.FBX
 
-# Remove trash
+# Remove unavailable assets
 *.psk
 *.psa
 *.meta
 *.model
+*.dds
 
 # Compiled Object files
 *.slo
