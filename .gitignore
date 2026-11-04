@@ -4,7 +4,6 @@
 # Temp Remove
 *.fbx
 *.FBX
-*.dds
 
 # Remove trash
 *.psk
