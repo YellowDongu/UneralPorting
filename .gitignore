@@ -2,10 +2,8 @@
 .vs/
 
 # Temp Remove
-*.uasset
 *.fbx
 *.FBX
-*.wav
 *.png
 *.dds
 
