@@ -1,0 +1,124 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "SemiActiveAntiAirMissile.h"
+#include "Aircraft.h"
+#include "Radar.h"
+#include "FireControlSystem.h"
+#include "ObjectFactory.h"
+#include "NiagaraComponent.h"
+#include "NiagaraParameterStore.h"
+#include "NiagaraFunctionLibrary.h"
+
+
+ASemiActiveAntiAirMissile::ASemiActiveAntiAirMissile()
+{
+    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bStartWithTickEnabled = false;
+    PrimaryActorTick.TickGroup = TG_PrePhysics;
+
+    MissileID = EWeaponID::SAAM;
+    FlyDistance = TNumericLimits<float>::Max();
+}
+
+void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (FlyDistance < 0.0f)
+    {
+        Release();
+        return;
+    }
+
+
+    float distance = velocity * DeltaTime * 10.0f;
+    FlyDistance -= distance;
+
+    SetActorLocation(GetActorLocation() + GetActorForwardVector() * distance);
+
+    if (FCSInfo->IsEmpty())
+        return;
+
+    Rebind((*FCSInfo)[0].Target);
+
+    if (!Target.IsValid() || !(*FCSInfo)[0].IsLock())
+        return;
+    {
+        //FRotator CurrentRotation = GetActorRotation();
+        //SetActorRotation(FMath::RInterpTo(CurrentRotation, FRotator(0.0f, CurrentRotation.Yaw, CurrentRotation.Roll), DeltaTime, rotationSpeed));
+    }
+
+    FVector vector = Target->GetActorLocation() - GetActorLocation();
+    float sqrMagnitude = vector.SizeSquared();
+    //SendDistance(sqrMagnitude);
+    GiveRadarWarn.ExecuteIfBound(sqrMagnitude);
+
+    if (sqrMagnitude < ImpactDistance)
+    {
+        UE_LOG(LogTemp, Log, TEXT("[AStandardMissile::Tick] Collide -> %s"), *Target->GetName());
+
+        GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), GetActorLocation(), 150.0f, 2.0f);
+        AVehicleBase* vehicle = Cast<AVehicleBase>(Target.Get());
+        if (vehicle != nullptr)
+            vehicle->HPDamage(damage);
+
+        Release();
+    }
+    else
+        SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.Rotation(), DeltaTime, rotationSpeed));
+}
+
+void ASemiActiveAntiAirMissile::Rebind(TWeakObjectPtr<class AVehicleBase> newTarget)
+{
+    if (Target == newTarget)
+        return;
+
+    Target.Reset();
+    GiveRadarWarn.Unbind();
+    if (TargetRader != nullptr)
+        TargetRader->UnTrace(this);
+    TargetRader.Reset();
+
+    if (newTarget == nullptr)
+        return;
+
+    Target = newTarget;
+    TargetRader = newTarget->FindComponentByClass<URadar>();
+
+    if (TargetRader != nullptr)
+    {
+        GiveRadarWarn.BindUObject(TargetRader.Get(), &URadar::CallWarning);
+        TargetRader->Trace(this);
+    }
+}
+
+void ASemiActiveAntiAirMissile::Release()
+{
+    ResetMissileBind();
+
+    SetActorEnableCollision(false);
+    //SetActorHiddenInGame(true);
+    SetActorTickEnabled(false);
+    BodyMesh->SetVisibility(false);
+
+    FTimerHandle timerHandle;
+    GetWorld()->GetTimerManager().SetTimer(timerHandle, this, &ASemiActiveAntiAirMissile::RetriveObject, 5.0f, false);
+}
+
+bool ASemiActiveAntiAirMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output)
+{
+    if(!Super::Shoot(owner, locked, output))
+        return false;
+
+    if (output == nullptr)
+        return false;
+
+    ASemiActiveAntiAirMissile* newInstance = static_cast<ASemiActiveAntiAirMissile*>(output);
+    newInstance->FCSInfo = &static_cast<AAircraft*>(owner.Get())->GetFireControlSystem()->GetCurrentTargets();
+
+    if (newInstance->FCSInfo == nullptr)
+        newInstance->Release(); 
+
+    return true;
+}

@@ -1,0 +1,370 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "LockInfomation.h"
+
+#include "Aircraft.h"
+//#include "PlayerPilot.h"
+#include "FireControlSystem.h"
+#include "UnGuidedBomb.h"
+#include "GuidedBomb.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+//#include "Kismet/GameplayStatics.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/WidgetComponent.h"
+
+
+TSharedPtr<LockSet> LockSet::Create(IndicatorCreationData& data)
+{
+//	LockSet* result = nullptr;
+	switch (data.Weapon->GetWeaponID())
+	{
+	case EWeaponID::Standard:
+	{
+		TSharedPtr<LockIndicator> indicator = MakeShared<LockIndicator>();
+
+		indicator->Initialize(data.CanvasPanel, data.LockBluePrint);
+		indicator->bIsActive = false;
+		indicator->SetActive(true);
+		return indicator;
+	}
+	case EWeaponID::FAAM:
+	{
+		TSharedPtr<LockIndicator> indicator = MakeShared<LockIndicator>();
+
+		indicator->Initialize(data.CanvasPanel, data.SpecialLockBluePrint);
+		indicator->bIsActive = true;
+		indicator->SetActive(false);
+		return indicator;
+	}
+	case EWeaponID::SAAM:
+	{
+		TSharedPtr<SAAMLockIndicator> indicator = MakeShared<SAAMLockIndicator>();
+
+		indicator->Initialize(data);
+		indicator->bIsActive = true;
+		indicator->SetActive(false);
+		return indicator;
+	}
+	case EWeaponID::UGB:
+	{
+		TSharedPtr<BombIndicator> indicator = MakeShared<BombIndicator>();
+		AUnGuidedBomb* weapon = Cast<AUnGuidedBomb>(data.Weapon);
+
+		indicator->Initialize(data.FCS, data.RangeIndicatorBluePrint, weapon->GetBlastArea());
+		indicator->bIsActive = true;
+		indicator->SetActive(false);
+		return indicator;
+	}
+	case EWeaponID::LGB:
+	{
+		TSharedPtr<LockableBombIndicator> indicator = MakeShared<LockableBombIndicator>();
+		AGuidedBomb* weapon = Cast<AGuidedBomb>(data.Weapon);
+
+		indicator->Initialize(data.CanvasPanel, data.SpecialLockBluePrint, data.RangeIndicatorBluePrint, weapon->GetBlastArea());
+		indicator->bIsActive = true;
+		indicator->SetActive(false);
+		return indicator;
+	}
+	default:
+		return nullptr;
+	}
+
+	return nullptr;
+}
+
+
+
+void LockIndicator::Initialize(UCanvasPanel* canvasPanel, TSubclassOf<UUserWidget>& LockBluePrint)
+{
+	check(canvasPanel);
+
+	LockRectangle = CreateWidget<UUserWidget>(canvasPanel->GetWorld(), LockBluePrint);
+	CanvasSlot = canvasPanel->AddChildToCanvas(LockRectangle);
+	PlayerController = canvasPanel->GetOwningPlayer();
+
+	check(PlayerController.Get());
+	check(LockRectangle);
+	check(CanvasSlot.Get());
+
+	//AnchorPresets.Maximum = AnchorPresets.Minimum = FVector2D(0.5f, 0.5f);
+	//CanvasSlot->SetAnchors(AnchorPresets);
+	CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+	CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+	CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
+	//CanvasSlot->SetZOrder(10);
+}
+
+void LockIndicator::Update(float deltaTime, FTargetInfo* target)
+{
+	TraceTarget(*target);
+}
+
+void LockIndicator::SetActive(bool value)
+{
+	if (bIsActive == value)
+		return;
+
+	bIsActive = value;
+	LockRectangle->SetVisibility(bIsActive ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void LockIndicator::TraceTarget(FTargetInfo& target)
+{
+	if (!target.Target.IsValid() || target.Lock >= 0.99f)
+	{
+		SetActive(false);
+		return;
+	}
+
+	if (Target != target.Target)
+		StartTraceTarget(target);
+
+	FVector2D screenPos;
+	if (UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PlayerController.Get(), Target->GetActorLocation(), screenPos, true))
+	{
+		SetActive(true);
+		CanvasSlot->SetPosition(FMath::Lerp(screenPos, InitialPosition, target.Lock));
+		SetColor(target.Lock >= 0.01f ? FColor::Green : FColor::Red);
+	}
+	else
+		SetActive(false);
+}
+
+void LockIndicator::StartTraceTarget(FTargetInfo& target)
+{
+	if (!target.Target.IsValid())
+	{
+		SetActive(false);
+		return;
+	}
+
+	FVector2D ScreenCenter = UWidgetLayoutLibrary::GetViewportSize(PlayerController->GetWorld()) * 0.5f;
+	float Range = FMath::Min(ScreenCenter.X, ScreenCenter.Y) * 0.5f;
+	ScreenCenter.X += FMath::RandRange(-Range, Range);
+	ScreenCenter.Y += FMath::RandRange(-Range, Range);
+
+	InitialPosition = ScreenCenter;
+	Target = target.Target;
+	CanvasSlot->SetPosition(InitialPosition);
+}
+
+void LockIndicator::SetColor(const FLinearColor& color)
+{
+	if (CurrentColor == color) return;
+
+	CurrentColor = color;
+	LockRectangle->SetColorAndOpacity(color);
+}
+
+
+
+void BombIndicator::Initialize(TWeakObjectPtr<UFireControlSystem> fcs, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area)
+{
+	FCS = fcs;
+
+	RangeIndicator = fcs->GetWorld()->SpawnActor<AActor>(RangeIndicatorBluePrint);
+	check(RangeIndicator);
+	RangeIndicatorUI = static_cast<UWidgetComponent*>(RangeIndicator->GetComponentByClass(UWidgetComponent::StaticClass()));
+	check(RangeIndicatorUI);
+	area *= 2.0;
+	RangeIndicatorUI->SetRelativeScale3D(FVector(1.0, area, area));
+	CalculateBombLandingPosition.BindUObject(fcs.Get(), &UFireControlSystem::CalculateBombLandingPosition);
+}
+
+void BombIndicator::SetColor(const FLinearColor& color)
+{
+	if (CurrentColor == color) return;
+
+	CurrentColor = color;
+	RangeIndicatorUI->GetMaterialInstance()->SetVectorParameterValue(TEXT("Color"), color);
+	//RangeIndicatorUI->GetUserWidgetObject()->SetColorAndOpacity(color);
+}
+
+void BombIndicator::Update(float deltaTime, FTargetInfo* target)
+{
+	DisplayExpactPosition();
+}
+
+void BombIndicator::SetActive(bool value)
+{
+	if (bIsActive == value)
+		return;
+
+	bIsActive = value;
+	RangeIndicator->SetActorHiddenInGame(!bIsActive);
+	//RangeIndicator->SetVisibility(bIsActive ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void BombIndicator::DisplayExpactPosition()
+{
+	FVector position;
+	if (CalculateBombLandingPosition.IsBound())
+	{
+		if (CalculateBombLandingPosition.Execute(position))
+		{
+			SetActive(true);
+			RangeIndicator->SetActorLocation(position);
+		}
+		else
+			SetActive(false);
+	}
+	else
+		SetActive(false);
+}
+
+
+
+
+void LockableBombIndicator::Initialize(class UCanvasPanel* canvasPanel, TSubclassOf<class UUserWidget>& LockBluePrint, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area)
+{
+	check(canvasPanel);
+
+	UWorld* world = canvasPanel->GetWorld();
+	PlayerController = canvasPanel->GetOwningPlayer();
+	RangeIndicator = world->SpawnActor<AActor>(RangeIndicatorBluePrint);
+	LockRectangle = CreateWidget<UUserWidget>(canvasPanel->GetWorld(), LockBluePrint);
+	check(RangeIndicator);
+	check(LockRectangle);
+
+	CanvasSlot = canvasPanel->AddChildToCanvas(LockRectangle);
+	RangeIndicatorUI = static_cast<UWidgetComponent*>(RangeIndicator->GetComponentByClass(UWidgetComponent::StaticClass()));
+	check(RangeIndicatorUI);
+	check(CanvasSlot.Get());
+
+	area *= 2.0;
+	RangeIndicatorUI->SetRelativeScale3D(FVector(1.0, area, area));
+
+	//AnchorPresets.Maximum = AnchorPresets.Minimum = FVector2D(0.5f, 0.5f);
+	//CanvasSlot->SetAnchors(AnchorPresets);
+	CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+	CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+	CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
+	//CanvasSlot->SetZOrder(10);
+}
+
+void LockableBombIndicator::Update(float deltaTime, FTargetInfo* target)
+{
+	TraceTarget(*target);
+}
+
+void LockableBombIndicator::SetColor(const FLinearColor& color)
+{
+	if (CurrentColor == color) return;
+
+	CurrentColor = color;
+	LockRectangle->SetColorAndOpacity(color);
+	RangeIndicatorUI->GetMaterialInstance()->SetVectorParameterValue(TEXT("Color"), color);
+	//RangeIndicatorUI->GetUserWidgetObject()->SetColorAndOpacity(color);
+}
+void LockableBombIndicator::SetActive(bool value)
+{
+	if (bIsActive == value)
+		return;
+
+	bIsActive = value;
+	RangeIndicator->SetActorHiddenInGame(!bIsActive);
+	//RangeIndicator->SetVisibility(bIsActive ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+	LockRectangle->SetVisibility(bIsActive ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void LockableBombIndicator::TraceTarget(FTargetInfo& target)
+{
+	if (!target.Target.IsValid() || target.Lock >= 0.99f)
+	{
+		SetActive(false);
+		return;
+	}
+
+	SetActive(true);
+
+	if (Target != target.Target)
+		StartTraceTarget(target);
+
+	RangeIndicator->SetActorLocation(target.Target->GetActorLocation());
+
+	FVector2D screenPos;
+	if (UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PlayerController.Get(), Target->GetActorLocation(), screenPos, true))
+		CanvasSlot->SetPosition(FMath::Lerp(screenPos, InitialPosition, target.Lock));
+
+
+	SetColor(target.Lock >= 0.01f ? FColor::Green : FColor::Red);
+}
+
+void LockableBombIndicator::StartTraceTarget(FTargetInfo& target)
+{
+	if (!target.Target.IsValid())
+	{
+		SetActive(false);
+		return;
+	}
+
+	FVector2D ScreenCenter = UWidgetLayoutLibrary::GetViewportSize(PlayerController->GetWorld()) * 0.5f;
+	float Range = FMath::Min(ScreenCenter.X, ScreenCenter.Y) * 0.5f;
+	ScreenCenter.X += FMath::RandRange(-Range, Range);
+	ScreenCenter.Y += FMath::RandRange(-Range, Range);
+
+	InitialPosition = ScreenCenter;
+	Target = target.Target;
+	CanvasSlot->SetPosition(InitialPosition);
+}
+
+
+
+
+void SAAMLockIndicator::Initialize(IndicatorCreationData& data)
+{
+	LockIndicator::Initialize(data.CanvasPanel, data.SpecialLockBluePrint);
+
+	FCS = data.FCS;
+	Owner = FCS->GetOwner();
+
+	RangeIndicator = FCS->GetWorld()->SpawnActor<AActor>(data.RangeIndicatorBluePrint);
+	check(RangeIndicator);
+	RangeIndicatorUI = static_cast<UWidgetComponent*>(RangeIndicator->GetComponentByClass(UWidgetComponent::StaticClass()));
+	check(RangeIndicatorUI);
+
+	double distance = static_cast<double>(ConvertFromDistance(data.Weapon->GetMaxRange()));
+	double radius = distance * FMath::Tan(FMath::DegreesToRadians(static_cast<double>(data.Weapon->GetLockAngle())));
+	
+	RangeIndicatorUI->SetRelativeLocationAndRotation(FVector(distance, 0.0, 0.0), FQuat::Identity);
+	RangeIndicatorUI->SetRelativeScale3D(FVector(1.0, radius, radius));
+}
+
+void SAAMLockIndicator::Update(float deltaTime, FTargetInfo* target)
+{
+	if (!target->Target.IsValid() || target->Lock >= 0.99f)
+	{
+		SetActive(false);
+		return;
+	}
+
+	LockIndicator::Update(deltaTime, target);
+
+	RangeIndicator->SetActorLocationAndRotation(Owner->GetActorLocation(), Owner->GetActorRotation());
+}
+
+void SAAMLockIndicator::SetActive(bool value)
+{
+	if (bIsActive == value)
+		return;
+
+	LockIndicator::SetActive(value);
+	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Set Special : %d"), bIsActive);
+	RangeIndicator->SetActorHiddenInGame(!bIsActive);
+	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Active : %d"), static_cast<int>(LockRectangle->GetVisibility()));
+	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Active : %d"), static_cast<int>(RangeIndicator->IsHidden()));
+	//RangeIndicator->SetVisibility(bIsActive ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void SAAMLockIndicator::SetColor(const FLinearColor& color)
+{
+	if (CurrentColor == color) return;
+
+	LockIndicator::SetColor(color);
+
+	CurrentColor = color;
+	RangeIndicatorUI->GetMaterialInstance()->SetVectorParameterValue(TEXT("Color"), color);
+	//RangeIndicatorUI->GetUserWidgetObject()->SetColorAndOpacity(color);
+}
