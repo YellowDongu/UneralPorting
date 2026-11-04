@@ -4,7 +4,6 @@
 # Temp Remove
 *.fbx
 *.FBX
-*.png
 *.dds
 
 # Remove trash
