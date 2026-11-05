@@ -47,7 +47,7 @@ void AFourAirtoAirMissile::Tick(float DeltaTime)
         Target = nullptr;
         return;
     }
-
+    
     FVector vector = Target->GetActorLocation() - GetActorLocation();
     float sqrMagnitude = vector.SizeSquared();
     //SendDistance(sqrMagnitude);
@@ -63,7 +63,7 @@ void AFourAirtoAirMissile::Tick(float DeltaTime)
         Release();
     }
     else
-        SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.Rotation(), DeltaTime, rotationSpeed));
+        SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.GetSafeNormal().Rotation(), DeltaTime, rotationSpeed));
 }
 
 void AFourAirtoAirMissile::Release()

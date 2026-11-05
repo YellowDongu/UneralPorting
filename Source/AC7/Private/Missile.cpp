@@ -23,27 +23,25 @@ void AMissile::CoolTimeEnd()
 
 bool AMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked) { AMissile* dummy; return Shoot(owner, locked, dummy); }
 
-void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked)
+void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<AVehicleBase> locked)
 {
     if (Trail == nullptr)
         Trail = FindComponentByClass<UNiagaraComponent>();
 
     GiveRadarWarn.Unbind();
-    BodyMesh->SetVisibility(true);
     SetActorEnableCollision(true);
     SetActorHiddenInGame(false);
     SetActorTickEnabled(true);
     BodyMesh->SetVisibility(true);
-    PrimaryActorTick.bStartWithTickEnabled = true;
 
-    Trail->Deactivate();
+    //Trail->Deactivate();
     SetActorLocationAndRotation(origin->GetActorLocation(), origin->GetActorRotation(), true);
     bIsProjectile = true;
     FlyDistance = MaxRange * 1.5f;
     //Trail->ReinitializeSystem();
     Trail->Activate();
 
-    if (locked == nullptr)
+    if (!IsAlive(locked))
         return;
 
     Target = locked;
@@ -54,6 +52,7 @@ void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> o
     GiveRadarWarn.BindUObject(TargetRader.Get(), &URadar::CallWarning);
     TargetRader->Trace(this);
 }
+
 bool AMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output)
 {
     if (bIsCoolTime)
@@ -107,7 +106,7 @@ void AMissile::ForceChangeTarget(TWeakObjectPtr<AActor> nextTarget)
 void AMissile::Lock(FTargetInfo& targetData, float DeltaTime, const FVector& forward, const FVector& position)
 {
     FVector direction = targetData.Target->GetActorLocation() - position;
-    targetData.CalculateDistance(direction, true, true);
+    targetData.CalculateDistance(direction, false, true);
 
     bool lockable = targetData.DistanceSquared > DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos;
     targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? DeltaTime : -DeltaTime), 0.0f, 1.0f);
@@ -117,7 +116,7 @@ void AMissile::Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectP
 {
     FVector direction = targetData.Target->GetActorLocation() - owner->GetActorLocation();
     FVector forward = owner->GetActorForwardVector();
-    targetData.CalculateDistance(direction, true, true);
+    targetData.CalculateDistance(direction, false, true);
 
     bool lockable = targetData.DistanceSquared > DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos;
     targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? DeltaTime : -DeltaTime), 0.0f, 1.0f);
@@ -162,6 +161,7 @@ void AMissile::RetriveObject()
     UObjectFactory* objectFactory = GetWorld()->GetSubsystem<UObjectFactory>();
     if (objectFactory != nullptr)
     {
+        Trail->Deactivate();
         SetActorEnableCollision(false);
         SetActorHiddenInGame(true);
         SetActorTickEnabled(false);

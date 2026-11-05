@@ -189,6 +189,7 @@ void URadar::CallWarning(double squareDistance)
 	if (squareDistance <= alartDistance)
 		bAlart = true;
 
+	UE_LOG(LogTemp, Warning, TEXT("[URadar::CallWarning] %s to %s"), bAlart ? TEXT("Alart") : TEXT("Warning"), *GetOwner()->GetName());
 	bWarning = true;
 }
 

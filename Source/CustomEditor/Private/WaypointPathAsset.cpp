@@ -41,7 +41,7 @@ void UWaypointPathAsset::GetData(FWaypointEditorData* dataClass)
 
 void UWaypointPathAsset::SetData(FWaypointEditorData* dataClass)
 {
-    if (dataClass == nullptr || SavedPoints.IsEmpty() || SavedWaypoints.IsEmpty())
+    if (dataClass == nullptr || SavedWaypoints.IsEmpty())
         return;
 
     dataClass->Waypoints.Reset();

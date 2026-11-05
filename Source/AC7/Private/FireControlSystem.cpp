@@ -494,6 +494,7 @@ bool UFireControlSystem::ShootMissile()
 		if (item->IsCoolTime())
 			continue;
 
+		UE_LOG(LogTemp, Error, TEXT("[UFireControlSystem::ShootMissile] ShootMissile Called"));
 		item->Shoot(static_cast<AVehicleBase*>(GetOwner()), currentTargets[0].Target.Get());
 		return true;
 	}

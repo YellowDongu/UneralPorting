@@ -63,7 +63,7 @@ void AStandardMissile::Tick(float DeltaTime)
         Release();
     }
     else
-        SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.Rotation(), DeltaTime, rotationSpeed));
+        SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.GetSafeNormal().Rotation(), DeltaTime, rotationSpeed));
 }
 
 void AStandardMissile::Release()

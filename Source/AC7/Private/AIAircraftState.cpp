@@ -255,7 +255,7 @@ bool AIAircraftState::NoticeWarning(TSharedPtr<DataSetterBlock>& output)
     {
         output = SetOverrideData();
         NextState = AIState::State::Override_Defend;
-        LOG(TEXT("[AIAircraftState::NoticeWarning] EnterDefend"));
+        LOG(TEXT("[AIAircraftState::NoticeWarning] EnterDefend %s"), *Owner->GetName());
         return true;
     }
 
@@ -577,14 +577,6 @@ TSharedPtr<ChaseState::OverridedDataBlock> ChaseState::SetOverrideData(void)
 
 bool ChaseState::Update()
 {
-    if (!IsAlive(ChasingTarget))
-    {
-        NextState = State::Search;
-        return true;
-    }
-
-    HorizontalRotation(ChasingTarget->GetActorLocation());
-
     if (DefendAltitude(DataToSend))
         return true;
 
@@ -593,6 +585,13 @@ bool ChaseState::Update()
 
     if (CogitateInFormation())
         return true;
+
+    if (!IsAlive(ChasingTarget))
+    {
+        NextState = State::Search;
+        return true;
+    }
+    HorizontalRotation(ChasingTarget->GetActorLocation());
 
     double distance = (ChasingTarget->GetActorLocation() - Owner->GetActorLocation()).SquaredLength();
     if (distance < RangeLengthSquare)
@@ -665,12 +664,6 @@ TSharedPtr<CombatState::OverridedDataBlock> CombatState::SetOverrideData(void)
 bool CombatState::Update()
 {
     static const double lockAngle = FMath::Cos(FMath::DegreesToRadians(2.5));
-    if (!IsAlive(Target))
-    {
-        NextState = State::Search;
-        LOG(TEXT("[CombatState::Update] %s !Target.IsValid"), *Owner->GetName());
-        return true;
-    }
 
     if (DefendAltitude(DataToSend))
         return true;
@@ -678,6 +671,13 @@ bool CombatState::Update()
         return true;
     if (CogitateInFormation())
         return true;
+
+    if (!IsAlive(Target))
+    {
+        NextState = State::Search;
+        LOG(TEXT("[CombatState::Update] %s !Target.IsValid"), *Owner->GetName());
+        return true;
+    }
 
     FRotator aircraftRotation = Owner->GetActorRotation();
     FVector directionVector = Target->GetActorLocation() - Owner->GetActorLocation();
@@ -872,6 +872,7 @@ bool DefendState::Update()
             NextState = state;
             DataToSend = MoveTemp(data);
 
+            LOG(TEXT("[DefendState::Start] DefendState Off : "), *Owner->GetName());
             return !intiated;
         }
         else return true;
@@ -1018,8 +1019,12 @@ bool ManeuverState::Start(const TSharedPtr<DataSetterBlock>& data)
     UMovementPathAsset::Load(*world, manuverName, WaypointData);
 
     if (WaypointData.IsEmpty())
+    {
+        UE_LOG(LogTemp, Error, TEXT("[ManeuverState::Start] Wrong Data"));
         return false;
+    }
 
+    UE_LOG(LogTemp, Error, TEXT("[ManeuverState::Start] Waypoint Num = : %d"), WaypointData.Num());
     CollisionCheck = Phase = 0;
     FRotator currentRotator = Owner->GetActorRotation();
     currentRotator.Roll = currentRotator.Pitch = 0.0f;

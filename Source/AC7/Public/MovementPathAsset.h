@@ -20,10 +20,39 @@ public:
     friend class FWaypointEditorData;
     static UMovementPathAsset* GetOrCreateAsset(const FString& PackageName);
     static UMovementPathAsset* Load(const FString& ObjectPath);
-    static void Load(UWorld& world, const FString& name, TArray<FWaypointData>& output);
+    static inline bool Load(UWorld& world, const FString& name, TArray<FWaypointData>& output)
+    {
+        output.Empty();
+        UMovementPathAsset* loadedAsset = Load(world, name);
+
+        if (loadedAsset == nullptr)
+            return false;
+
+        output = MoveTemp(loadedAsset->SavedPoints);
+        return true;
+        //return S_OK;
+    }
+    static inline bool Load(UWorld& world, const FString& name, TArray<FWaypointData>& waypointSlot, TArray<FWaypointData>& waypointNodeSlot)
+    {
+        waypointSlot.Empty();
+        waypointNodeSlot.Empty();
+        UMovementPathAsset* loadedAsset = Load(world, name);
+
+        if (loadedAsset == nullptr)
+            return false;
+
+        waypointSlot = MoveTemp(loadedAsset->SavedPoints);
+        waypointNodeSlot = MoveTemp(loadedAsset->SavedWaypoints);
+        return true;
+        //return S_OK;
+    }
 
 protected:
-    UPROPERTY(EditAnywhere) TArray<FWaypointData> SavedPoints;
-    UPROPERTY(EditAnywhere) TArray<FWaypointData> SavedWaypoints;
+    static UMovementPathAsset* Load(UWorld& world, const FString& name);
+
+
+
+    UPROPERTY(EditAnywhere) TArray<FWaypointData> SavedPoints; // 보간된 것들
+    UPROPERTY(EditAnywhere) TArray<FWaypointData> SavedWaypoints; // 원래 웨이포인트
     //UPROPERTY(Transient) TArray<FWaypointPoint> SavedWaypoints; // 이렇게 하면 저장되지 않음
 };

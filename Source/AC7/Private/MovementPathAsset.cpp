@@ -27,10 +27,9 @@ UMovementPathAsset* UMovementPathAsset::Load(const FString& ObjectPath)   // ¿¹:
     return LoadObject<UMovementPathAsset>(nullptr, *ObjectPath);
 }
 
-void UMovementPathAsset::Load(UWorld& world, const FString& name, TArray<FWaypointData>& output)
-{
-    output.Empty();
 
+UMovementPathAsset* UMovementPathAsset::Load(UWorld& world, const FString& name)
+{
     UE_LOG(LogTemp, Error, TEXT("[UMovementPathAsset::Load] Load Asset : %s"), *name);
     UBluePrintCollector* collector = world.GetGameInstance<UGameMaster>()->GetCollector();
     check(collector);
@@ -39,17 +38,13 @@ void UMovementPathAsset::Load(UWorld& world, const FString& name, TArray<FWaypoi
     if (asset == nullptr)
     {
         UE_LOG(LogTemp, Error, TEXT("[UMovementPathAsset::Load] Asset Not Found : %s"), *name);
-        return;
+        return nullptr;
     }
 
+    //UMovementPathAsset* loadedAsset = LoadObject<UMovementPathAsset>(nullptr, *asset->ToString());
     UMovementPathAsset* loadedAsset = UAssetManager::GetStreamableManager().LoadSynchronous(*asset);
-    if (loadedAsset == nullptr)
-    {
-        //loadedAsset = LoadObject<UMovementPathAsset>(nullptr, *asset->ToString());
-        //if (loadedAsset == nullptr)
+    if (!IsValid(loadedAsset))
         UE_LOG(LogTemp, Error, TEXT("[UMovementPathAsset::Load] Asset Not Loaded : %s"), *name);
-            return;
-    }
-    
-    output = MoveTemp(loadedAsset->SavedPoints);
+
+    return loadedAsset;
 }
