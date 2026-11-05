@@ -12,6 +12,7 @@
 #include "Flare.h"
 #include "Bullet.h"
 #include "AIAircraftPilot.h"
+#include "TeamManagementSystem.h"
 
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -81,6 +82,73 @@ void UObjectFactory::Explosion(UWorld* world, const FVector& position, float Siz
 	auto newParticle = UNiagaraFunctionLibrary::SpawnSystemAtLocation(world, ExplosionParticle, position, FRotator::ZeroRotator, FVector::OneVector, true, true, ENCPoolMethod::AutoRelease);
 	newParticle->SetVariableFloat(TEXT("User.Lifetime"), lifeTime);
 	newParticle->SetVariableFloat(TEXT("User.Size"), Size);
+}
+
+TWeakObjectPtr<class AVehicleBase> UObjectFactory::Instantiate(FSpawnInfomation& spawnInfomation, UTeamManagementSystem* teamSystem, const TWeakObjectPtr<AVehicleBase>& Leader, UWorld* world)
+{
+	if (world == nullptr)
+	{
+		world = GetWorld();
+		if (world == nullptr)
+			return nullptr;
+	}
+
+	TWeakObjectPtr<AVehicleBase> newInstance = nullptr;
+
+	if (AMissionMode::GetSpectatorMode())
+		spawnInfomation.bIsPlayer = false;
+
+	if (bIsPlayerSpawned == spawnInfomation.bIsPlayer)
+		spawnInfomation.bIsPlayer = false;
+	if (!ActivedPool.IsValidIndex(spawnInfomation.TeamIndex))
+		spawnInfomation.TeamIndex = 0;
+
+	if (spawnInfomation.bIsPlayer)
+	{
+		spawnInfomation.playerInfoPointer = &GetWorld()->GetGameInstance<UGameMaster>()->GetPlayerInfomation();
+
+		newInstance = Instantiate(*world, spawnInfomation.playerInfoPointer->VehicleID);
+		if (newInstance == nullptr) return nullptr;
+
+		newInstance->SystemInitialize(spawnInfomation);
+		APlayerPilot* player = Cast<APlayerPilot>(world->GetFirstPlayerController());
+		if (player == nullptr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[UObjectFactory::Instantiate] %s"), world->GetFirstPlayerController() == nullptr ? TEXT("No Controller") : *(FString(TEXT("Wrong Controller : ") + world->GetFirstPlayerController()->GetClass()->GetName())));
+			Release(newInstance.Get());
+			return nullptr;
+		}
+
+		newInstance->SquadDataReset();
+		teamSystem->TeamAdd(newInstance->GetSquadData(), Leader);
+		player->Attach(static_cast<AAircraft*>(newInstance.Get()));
+
+		ActivedPool[spawnInfomation.TeamIndex].Add(newInstance);
+		bIsPlayerSpawned = true;
+	}
+	else
+	{
+		newInstance = Instantiate(*world, spawnInfomation.VehicleID);
+		if (newInstance == nullptr) return nullptr;
+		newInstance->SystemInitialize(spawnInfomation);
+
+		TWeakObjectPtr<AAIPilot> aiPilot = Instantiate(world, spawnInfomation);
+		if (aiPilot == nullptr)
+		{
+			Release(newInstance.Get());
+			return nullptr;
+		}
+
+		newInstance->SquadDataReset();
+		teamSystem->TeamAdd(newInstance->GetSquadData(), Leader);
+		aiPilot->Attach(newInstance.Get());
+
+		ActivedPool[spawnInfomation.TeamIndex].Add(newInstance);
+		if (spawnInfomation.IsTGT)
+			TGTCount++;
+	}
+
+	return newInstance;
 }
 
 TWeakObjectPtr<AVehicleBase> UObjectFactory::Instantiate(UWorld& world, FSpawnInfomation& spawnInfomation, TWeakObjectPtr<AController>& output)
@@ -162,11 +230,8 @@ TWeakObjectPtr<AVehicleBase> UObjectFactory::Instantiate(UWorld& world, EVehicle
 
 TObjectPtr<AMissile> UObjectFactory::Instantiate(AMissile* origin)
 {
-	int index = static_cast<int>(origin->GetWeaponID());
-	if (index < 0 && index >= static_cast<int>(EWeaponID::END))
-		return nullptr;
-
-	TObjectPtr<AMissile> newInstance = Get<AMissile>(MissilePool[index]);
+	EWeaponID id = origin->GetWeaponID();
+	TObjectPtr<AMissile> newInstance = Get<AMissile>(MissilePool[static_cast<int>(id)]);
 
 	if (newInstance == nullptr)
 	{
@@ -174,6 +239,7 @@ TObjectPtr<AMissile> UObjectFactory::Instantiate(AMissile* origin)
 		newInstance = GetWorld()->SpawnActor<AMissile>(origin->GetClass(), origin->GetActorTransform(), Params);
 		if (newInstance == nullptr)
 			return nullptr;
+
 		newInstance->PrimaryActorTick.bStartWithTickEnabled = false;
 	}
 

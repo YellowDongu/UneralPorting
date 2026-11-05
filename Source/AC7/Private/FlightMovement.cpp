@@ -36,7 +36,7 @@ void UFlightMovement::Update(float deltaTime)
 	if (WaypointData.IsEmpty())
 	{
 		AActor* Owner = GetOwner();
-		Owner->SetActorLocation(Owner->GetActorLocation() + Owner->GetActorForwardVector() * Control->Velocity * deltaTime * 2.0f);
+		Owner->SetActorLocation(Owner->GetActorLocation() + Owner->GetActorForwardVector() * ConvertFromVelocity(Control->Velocity) * deltaTime);
 		RotationCalculation(deltaTime);
 	}
 	else
@@ -120,7 +120,7 @@ void UFlightMovement::SystemIntegration(FControl* poineter, FAircraftSpec* specP
 
 void UFlightMovement::FollowWaypoint(float deltaTime)
 {
-	double leftDistance = static_cast<double>(Control->Velocity) * static_cast<double>(deltaTime) * 2.0;
+	double leftDistance = ConvertFromVelocity(static_cast<double>(Control->Velocity)) * static_cast<double>(deltaTime);
 	double leftDistanceSqare = leftDistance * leftDistance;
 	FVector position = GetOwner()->GetActorLocation();
 	FQuat rotation = GetOwner()->GetActorQuat();

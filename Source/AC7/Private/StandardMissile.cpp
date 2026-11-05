@@ -29,7 +29,7 @@ void AStandardMissile::Tick(float DeltaTime)
         return;
     }
 
-    float distance = velocity * DeltaTime * 10.0f;
+    float distance = ConvertFromVelocity(velocity) * DeltaTime;
     FlyDistance -= distance;
 
 	SetActorLocation(GetActorLocation() + GetActorForwardVector() * distance);

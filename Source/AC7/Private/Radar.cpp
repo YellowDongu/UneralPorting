@@ -34,6 +34,10 @@ void URadar::SystemIntegration(TWeakObjectPtr<class USphereComponent> collider, 
 	if (collider == nullptr)
 		return;
 
+	AAircraft* Owner = Cast<AAircraft>(GetOwner());
+	if (Owner != nullptr)
+		Owner->GetControl(Control);
+
 	Collider = collider;
 	Team = _team;
 	RadarRange = _raderDistance;
@@ -62,8 +66,6 @@ void URadar::SystemIntegration(TWeakObjectPtr<class USphereComponent> collider, 
 	//
 	//}
 	//}
-
-
 
 	Collider->OnComponentBeginOverlap.AddDynamic(this, &URadar::OnTriggerEnter);
 	Collider->OnComponentEndOverlap.AddDynamic(this, &URadar::OnTriggerExit);

@@ -32,7 +32,7 @@ public:
 	FSetTextColor SetTextColor;
 
 private:
-	bool binded{ false };
+	bool bBinded{ false };
 	float* Velocity{ nullptr };
 	FLinearColor HUDColor = FLinearColor::Green;
 	FLinearColor BaseColor = FLinearColor::Green;
@@ -41,8 +41,8 @@ private:
 	TFunction<FVector()> GetRotation{};
 
 	TArray<class UImage*> AttitudeIndicatorMarks[4];
-	TObjectPtr<class USoundBase> MissileWarnSound{ nullptr };
-
+	TWeakObjectPtr<class URadar> PlayerRadar{ nullptr };
+	TSharedPtr<struct FSoundSet> SoundSet{ nullptr };
 
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	class UTextBlock* SpeedMeterText{ nullptr };

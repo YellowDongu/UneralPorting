@@ -10,6 +10,8 @@
 /**
  * 
  */
+
+class UAudioComponent;
 UCLASS()
 class AC7_API USoundSubsystem : public UGameInstanceSubsystem
 {
@@ -32,4 +34,25 @@ private:
 	UPROPERTY() TMap<FString, TSoftObjectPtr<USoundBase>> SoundAssets;
 	UPROPERTY() TMap<FString, TObjectPtr<UAudioComponent>> Channels; // 강한 참조로 GC 수거 방지
 
+};
+
+USTRUCT()
+struct AC7_API FSoundSet
+{
+	GENERATED_BODY()
+
+	FSoundSet() = default;
+
+	void Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound);
+	void BlinkSound(float maxTime, float deltaTime);
+	void Stop(void);
+	void Play(void);
+	bool IsPlaying(bool atChannel = true);
+
+	TWeakObjectPtr<UAudioComponent> Channel{ nullptr };
+	TObjectPtr<USoundBase> Sound{ nullptr };
+
+private:
+	bool bIsPlaying{ false };
+	float Timer{ 0.0f };
 };

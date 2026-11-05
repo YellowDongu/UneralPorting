@@ -48,19 +48,19 @@ public:
     // Variable & GetSet Methods
     //===========================================
 
-    TeamData& GetSquadData() { return SquadSystem; }
-    void SquadDataReset() { SquadSystem.Reset(); SquadSystem.MyVehicle = this; }
-    EVehicleID GetVehicleID() { return id; }
-    FString GetVehicleName() { return vehicleName; }
-    int GetTeam() { return Team; }
-    bool IsTGT() { return bIsTGT; }
-    bool IsLand() { return VehicleMask.IsLand(); }
-    bool IsAir() { return VehicleMask.IsAir(); }
-    bool IsAlive() { return bIsAlive; }
-    const FWeaponMask& GetMask() const { return VehicleMask; }
-    float HPPresentage() { return 1.0f - (float)HP / (float)MaxHp; }
-    int GetHP() { return HP; }
-    int GetMaxHp() { return MaxHp; }
+    TeamData& GetSquadData(void) { return SquadSystem; }
+    void SquadDataReset(void) { SquadSystem.Reset(); SquadSystem.MyVehicle = this; }
+    EVehicleID GetVehicleID(void) const { return id; }
+    FString GetVehicleName(void) const { return vehicleName; }
+    int GetTeam(void) const { return Team; }
+    bool IsTGT(void) const { return bIsTGT; }
+    bool IsLand(void) const { return VehicleMask.IsLand(); }
+    bool IsAir(void) const { return VehicleMask.IsAir(); }
+    bool IsAlive(void) const { return bIsAlive; }
+    const FWeaponMask& GetMask(void) const { return VehicleMask; }
+    float HPPresentage(void) const { return 1.0f - (float)HP / (float)MaxHp; }
+    int GetHP(void) const { return HP; }
+    int GetMaxHp(void) const { return MaxHp; }
 
     class USceneComponent* GetFirstCameraArm() { return FirstCameraArm; }
     class USpringArmComponent* GetThirdCameraArm() { return ThirdCameraArm; }
@@ -92,3 +92,8 @@ protected:
 
     TeamData SquadSystem;
 };
+
+
+inline bool IsAlive(const TWeakObjectPtr<AVehicleBase>& object) { return object.IsValid() && object->IsAlive(); }
+inline bool IsAlive(const TObjectPtr<AVehicleBase>& object) { return IsValid(object) && object->IsAlive(); }
+inline bool IsAlive(const AVehicleBase* object) { return IsValid(object) && object->IsAlive(); }

@@ -9,9 +9,9 @@ void UStatusUI::BindPlayer(class AAircraft* vehicle, class APlayerPilot* player)
 {
 	Player = vehicle;
 
-	int SpecialWeapon = vehicle->GetFireControlSystem()->GetSpecial();
-	EVehicleID vehicleID = vehicle->GetVehicleID();
-	EWeaponID specialWeaponID = vehicle->GetFireControlSystem()->GetWeaponID(true);
+	//int SpecialWeapon = vehicle->GetFireControlSystem()->GetSpecial();
+	//EVehicleID vehicleID = vehicle->GetVehicleID();
+	//EWeaponID specialWeaponID = vehicle->GetFireControlSystem()->GetWeaponID(true);
 
 	Gauge->BindPlayer(vehicle, player);
 

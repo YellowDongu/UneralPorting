@@ -8,22 +8,25 @@
 
 #define MapEditMode
 
-// 단위 환산, float과 double만
 template<typename Type>
 inline constexpr Type ConvertFromAltitude(Type value) { return value * 5.0; }
 template<typename Type>
 inline constexpr Type ConvertToAltitude(Type value) { return value / 5.0; }
 template<typename Type>
-inline constexpr Type ConvertFromVelocity(Type value) { return value / 10.0; }
+inline constexpr Type ConvertFromVelocity(Type value) { return value * 3.0; } // velocity to real velocity 
 template<typename Type>
-inline constexpr Type ConvertToVelocity(Type value) { return value; }
+inline constexpr Type ConvertToVelocity(Type value) { return value; } // velocity to visible speed number
 template<typename Type>
 inline constexpr Type ConvertFromDistance(Type value) { return value * 5.0; }
 template<typename Type>
 inline constexpr Type ConvertToDistance(Type value) { return value / 5.0; }
 
-inline float CalibrateAngle(float angle) { return FMath::UnwindDegrees(angle); }
-inline double CalibrateAngle(double angle) { return FMath::UnwindDegrees(angle); }
+inline float CalibrateAngle(float angle) { return FMath::UnwindDegrees(angle); } // 메모용
+inline double CalibrateAngle(double angle) { return FMath::UnwindDegrees(angle); } // 메모용
+
+FString ExtractFileName(const FString& FilePath); // 메모용
+FString ExtractFileExtension(const FString& FilePath); // 메모용
+FString ExtractFileFullName(const FString& FilePath); // 메모용
 
 struct FTargetInfo
 {
@@ -32,9 +35,13 @@ struct FTargetInfo
 		
 	inline void LockReset(void) { Lock = 1.0f; }
 	inline const bool IsLock(void) const { return Lock < 0.001f; }
+	void CalculateDistance(const TWeakObjectPtr<class AVehicleBase>& onwer, bool OnlySqared = true);
+	void CalculateDistance(const FVector& position,bool isWorldPosition = true, bool OnlySqared = true);
+	void CalculateDistance(double distanceSquared, bool OnlySqared = true) { DistanceSquared = distanceSquared; if (!OnlySqared) Distance = FMath::Sqrt(DistanceSquared); }
 
 	TWeakObjectPtr<class AVehicleBase> Target{ nullptr };
 	float Key{ 0.0f }, Lock{ 1.0f };
+	double DistanceSquared{ 0.0 }, Distance{ 0.0 };
 };
 
 USTRUCT(BlueprintType)

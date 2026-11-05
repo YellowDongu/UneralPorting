@@ -57,6 +57,7 @@ public:
 	inline void DeployGear(bool instantSet = false);
 
 
+	inline void GetControl(TObjectPtr<FControl>& poineter) { poineter = &Control; } // 공유용, 잘못 쓰지 말라고 포인터를 직접 넣게 함
 	inline void GetControl(FControl*& poineter) { poineter = &Control; } // 공유용, 잘못 쓰지 말라고 포인터를 직접 넣게 함
 	inline const FControl& GetControl() const { return Control; } // 참조용
 	TWeakObjectPtr<class URadar> GetRadar() { return Radar; }

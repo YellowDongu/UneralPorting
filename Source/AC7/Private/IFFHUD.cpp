@@ -64,7 +64,7 @@ void UIFFHUD::StartTrack(AVehicleBase* vehicle, AAircraft* player, UCanvasPanelS
 
 void UIFFHUD::Update(float DeltaTime)
 {
-	if (!TargetVehicle.IsValid())
+	if (!IsAlive(TargetVehicle))
 	{
 		TargetVehicle = nullptr;
 		Active(false);

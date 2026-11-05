@@ -133,7 +133,13 @@ TSharedPtr<ManeuverState> testmodule;
 void StartTest(APlayerPilot* pilot, AAircraft* aircraft)
 {
     if (testmodule.IsValid())
-        return;
+    {
+        if (testmodule->AIAircraftState::Start())
+            return;
+
+        testmodule->Release();
+        testmodule.Reset();
+    }
 
     AIAircraftState::AircraftDefaultData defaultData;
     aircraft->GetControl(defaultData.Control);

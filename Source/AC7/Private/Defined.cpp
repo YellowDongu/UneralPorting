@@ -92,12 +92,6 @@ void TeamData::Reset()
 #include "HAL/FileManager.h"
 #include "Misc/Paths.h"
 
-const static FString FileExtension = TEXT("meta");
-const static FString FileFilter = TEXT("*.") + FileExtension;
-const static FString DeleteFilesCommandName = TEXT("MyTools.DeleteTmpFiles");
-const static FString DeleteFilesCommandExplain = (TEXT("Delete all %s files under the Content directory."), *FileExtension);
-const static FString ContentPath = FPaths::ProjectContentDir(); // 프로젝트의 Content 폴더 경로
-
 FString ExtractFileName(const FString& FilePath) // 메모용
 {
 	return FPaths::GetBaseFilename(FilePath);
@@ -110,6 +104,12 @@ FString ExtractFileName(const FString& FilePath) // 메모용
 }
 FString ExtractFileExtension(const FString& FilePath) { return FPaths::GetExtension(FilePath); } // 메모용
 FString ExtractFileFullName(const FString& FilePath) { return FPaths::GetCleanFilename(FilePath); } // 메모용
+
+const static FString FileExtension = TEXT("meta");
+const static FString FileFilter = TEXT("*.") + FileExtension;
+const static FString DeleteFilesCommandName = TEXT("MyTools.DeleteTmpFiles");
+const static FString DeleteFilesCommandExplain = (TEXT("Delete all %s files under the Content directory."), *FileExtension);
+const static FString ContentPath = FPaths::ProjectContentDir(); // 프로젝트의 Content 폴더 경로
 
 
 void DeleteFiles()
@@ -136,3 +136,21 @@ void DeleteFiles()
 
 static FAutoConsoleCommand DeleteFilesCommand(*DeleteFilesCommandName, *DeleteFilesCommandExplain, FConsoleCommandDelegate::CreateLambda([]() { Async(EAsyncExecution::ThreadPool, []() { DeleteFiles(); }); })); // 내부에서 에디터 전용 API나 UObject를 조작한다면 해당 부분은 게임 스레드에서 처리해야됨
 //static FAutoConsoleCommand DeleteFilesCommand(*DeleteFilesCommandName, *DeleteFilesCommandExplain, FConsoleCommandDelegate::CreateLambda([]() { DeleteFiles(); }));
+
+void FTargetInfo::CalculateDistance(const TWeakObjectPtr<AVehicleBase>& onwer, bool OnlySqared)
+{
+	if (!IsAlive(Target) || !IsAlive(onwer))
+		return;
+
+	CalculateDistance(onwer->GetActorLocation(), true, OnlySqared);
+}
+
+void FTargetInfo::CalculateDistance(const FVector& position, bool isWorldPosition, bool OnlySqared)
+{
+	DistanceSquared = isWorldPosition ? (Target->GetActorLocation() - position).SizeSquared() : position.SizeSquared();
+
+	if (OnlySqared)
+		return;
+
+	Distance = FMath::Sqrt(Distance);
+}

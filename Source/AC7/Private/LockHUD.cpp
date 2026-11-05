@@ -27,8 +27,10 @@ void ULockHUD::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 				continue;
 			}
 
-			aimed = true;
-			SpecialIndicators[i]->Update(0.0f, &(*currentTargets)[i]);
+			FTargetInfo& target = (*currentTargets)[i];
+
+			aimed |= target.IsLock();
+			SpecialIndicators[i]->Update(0.0f, &target);
 		}
 
 		if (aimed != LockSoundChannel->IsPlaying())
@@ -49,23 +51,22 @@ void ULockHUD::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 			return;
 		}
 
-		StandardIndicator->Update(0.0f, &(*currentTargets)[0]);
+		FTargetInfo& target = (*currentTargets)[0];
+		StandardIndicator->Update(0.0f, &target);
 
-		if ((*currentTargets)[0].Lock < 0.1f)
+		if (target.Lock >= 0.9f)
+			LockSoundSet->Stop();
+		else if (target.Lock < 0.1f)
+			LockSoundSet->Play();
+		else
 		{
-			if (LockSoundChannel->IsPlaying())
-				return;
-			USoundBase* Sound = LockSoundChannel->GetSound();
-
-			if (Sound == nullptr)
-				return;
-
-			UE_LOG(LogTemp, Log, TEXT("LockSoundChannel->Play() %s"), *Sound->GetName());
-			LockSoundChannel->Play();
-			bSoundActive = false;
-			SoundTimer = 50.0f;
+			float duration = LockSoundSet->Sound->Duration;
+			duration = LockSoundSet->IsPlaying(false) ? duration : FMath::Max(LockSoundMin, duration * (*currentTargets)[0].Lock) * 1.25f;
+			LockSoundSet->BlinkSound(duration, DeltaTime);
 		}
-		else if ((*currentTargets)[0].Lock >= 0.9f)
+
+		/*
+		if (target.Lock >= 0.9f)
 		{
 			if (LockSoundChannel->IsPlaying())
 			{
@@ -75,8 +76,18 @@ void ULockHUD::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 			}
 
 		}
+		else if (target.Lock < 0.1f)
+		{
+			if (!LockSoundChannel->IsPlaying())
+			{
+				LockSoundChannel->Play();
+				bSoundActive = false;
+				SoundTimer = 50.0f;
+			}
+		}
 		else
-			PlayLockSound(DeltaTime, !bSoundActive ? Lock->Duration * LockSoundDuration : FMath::Lerp((*currentTargets)[0].Lock, LockSoundMin, LockSoundMax));
+			PlayLockSound(DeltaTime, bSoundActive ? Lock->Duration : FMath::Max(LockSoundMin, Lock->Duration * (*currentTargets)[0].Lock) * 1.25f);
+		*/
 	}
 }
 
@@ -131,7 +142,9 @@ void ULockHUD::SetSound(UWorld* world)
 		return;
 
 	USoundSubsystem* soundSystem = GetGameInstance()->GetSubsystem<USoundSubsystem>();
-	Lock = soundSystem->GetSound(TEXT("StandardLock"));
+	LockSoundSet = MakeShared<FSoundSet>();
+	LockSoundSet->Sound = soundSystem->GetSound(TEXT("StandardLock"));
+
 	SpecialLock = soundSystem->GetSound(TEXT("336031978"));
 	USoundWave* SoundWave = Cast<USoundWave>(SpecialLock);
 	if (SoundWave != nullptr)
@@ -141,7 +154,7 @@ void ULockHUD::SetSound(UWorld* world)
 	}
 	//UE_LOG(LogTemp, Log, TEXT("class=%s path=%s looping=%d"), *SoundWave->GetClass()->GetName(), *SoundWave->GetPathName(), SoundWave ? (int)SoundWave->bLooping : -1);
 
-	SoundWave = Cast<USoundWave>(Lock);
+	SoundWave = Cast<USoundWave>(LockSoundSet->Sound);
 	if (SoundWave != nullptr)
 	{
 		SoundWave->bLooping = 1;
@@ -149,13 +162,13 @@ void ULockHUD::SetSound(UWorld* world)
 	}
 	//UE_LOG(LogTemp, Log, TEXT("class=%s path=%s looping=%d"), *SoundWave->GetClass()->GetName(), *SoundWave->GetPathName(), SoundWave ? (int)SoundWave->bLooping : -1);
 
-	LockSoundChannel = soundSystem->GetChannel(TEXT("LockSoundChannel"), world).Get();
+	LockSoundSet->Channel = LockSoundChannel = soundSystem->GetChannel(TEXT("LockSoundChannel"), world).Get();
 
 	if (!LockSoundChannel->IsRegistered())
 		LockSoundChannel->RegisterComponentWithWorld(world);
 
 	LockSoundChannel->bAutoActivate = false;
-	LockSoundChannel->SetSound(Lock);
+	LockSoundChannel->SetSound(LockSoundSet->Sound);
 
 	bSoundActive = false;
 	SoundTimer = 50.0f;
@@ -173,7 +186,7 @@ void ULockHUD::ChangeLockUI(void)
 		item->SetActive(bSelect);
 
 	LockSoundChannel->Stop();
-	LockSoundChannel->SetSound(bSelect ? SpecialLock : Lock);
+	LockSoundChannel->SetSound(bSelect ? SpecialLock : LockSoundSet->Sound);
 	SoundTimer = 100.0f;
 }
 

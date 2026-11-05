@@ -148,6 +148,7 @@ protected:
     TSortedMap<float, TWeakObjectPtr<class AVehicleBase>> Targets;
     TArray<FTargetInfo> currentTargets;
 
+    TObjectPtr<FControl> Control{ nullptr };
     TWeakObjectPtr<class URadar> Radar{ nullptr };
     FDelegateHandle AddHandle, RemoveHandle;
     TObjectPtr<class USoundBase> ShootSound, SpecialShootSound;

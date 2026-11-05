@@ -51,12 +51,22 @@ void AAIPilot::Tick(float DeltaTime)
 
 void AAIPilot::ChangeCurrentState(EAIState nextState)
 {
+    static int32 AntiRecursionCounter = 0;
+
     UE_LOG(LogTemp, Error, TEXT("%s // ChangeState : %s, NextChangeState : %s"), *Vehicle->GetName(), *StateString(currentState_debug), *StateString(nextState));
     TSharedPtr<AIState::DataSetterBlock> dataBlock = CurrentState->GetDataBlock();
     AIState** findedState = States.Find(nextState);
 
     while (findedState != nullptr)
     {
+        if (AntiRecursionCounter >= 10)
+        {
+            UE_LOG(LogTemp, Error, TEXT("[AAIPilot::ChangeCurrentState] AntiRecursionCounter OverFlow"));
+            CurrentState = &NullState;
+            // need? add : end process
+            break;
+        }
+
         CurrentState = *findedState;
         currentState_debug = nextState;
 
@@ -67,7 +77,10 @@ void AAIPilot::ChangeCurrentState(EAIState nextState)
         dataBlock = (*findedState)->GetDataBlock();
         findedState = States.Find(nextState);
         UE_LOG(LogTemp, Error, TEXT("%s // StateStartFailed : %s, nextState : %s"), *Vehicle->GetName(), *StateString(currentState_debug), *StateString(nextState));
+        AntiRecursionCounter++;
     }
+
+    AntiRecursionCounter = 0;
 }
 
 void AAIPilot::Attach(AVehicleBase* vehicle)

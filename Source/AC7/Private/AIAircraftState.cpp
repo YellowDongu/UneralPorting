@@ -35,7 +35,6 @@ int32 DebugMessageIndex = 0;
 #define Log(index, message, ...)
 #endif
 
-static bool IsAlive(const TWeakObjectPtr<AVehicleBase>& pointer) { return pointer.IsValid() && pointer->IsAlive(); }
 
 AIAircraftState::AIAircraftState()
 {
@@ -49,40 +48,39 @@ bool AIAircraftState::Start(const TSharedPtr<DataSetterBlock>& data)
 {
     NextState = State::END;
 
-    if (Owner == nullptr)
+    if (!IsAlive(Owner))
         return false;
 
-    if (TeamSystem == nullptr)
+    if (!TeamSystem.IsValid())
     {
-        if (Owner->GetWorld() == nullptr)
+		UWorld* world = Owner->GetWorld();
+        if (world == nullptr)
         {
             UE_LOG(LogTemp, Error, TEXT("[AIAircraftState::Start] Owner->GetWorld() == nullptr"));
             return false;
         }
 
-        TeamSystem = Owner->GetWorld()->GetSubsystem<UTeamManagementSystem>();
-        if (TeamSystem == nullptr)
+        TeamSystem = world->GetSubsystem<UTeamManagementSystem>();
+        if (TeamSystem.IsValid())
             return false;
     }
 
-    return SquadData != nullptr && Control != nullptr && Radar != nullptr;
+    return true;
 }
 
 void AIAircraftState::SetDefaultData(DefaultDataBlock* data)
 {
     AircraftDefaultData* detailData = static_cast<AircraftDefaultData*>(data);
-    SquadData = detailData->SquadData;
-    Control = detailData->Control;
     Owner = detailData->Owner;
     if (Owner == nullptr)
         return;
 
+    SquadData = &Owner->GetSquadData();
+    Owner->GetControl(Control);
     Radar = Owner->GetRadar();
 
-    if (Owner->GetWorld() == nullptr)
-        return;
-
-    TeamSystem = Owner->GetWorld()->GetSubsystem<UTeamManagementSystem>();
+    if (Owner->GetWorld() != nullptr)
+        TeamSystem = Owner->GetWorld()->GetSubsystem<UTeamManagementSystem>();
 }
 
 bool AIAircraftState::HorizontalRotation(const FVector& targetPosition, double* leftSquaredLength)
@@ -359,7 +357,7 @@ bool InFomationState::Start(const TSharedPtr<DataSetterBlock>& data)
     if (!TeamSystem->LeaderCheck(*SquadData))
     {
         NextState = State::Search;
-        return true;
+        return false;
     }
 
     if (SquadData->IsLeader())
@@ -623,16 +621,18 @@ bool CombatState::Start(const TSharedPtr<DataSetterBlock>& data)
 
     CombatStateDefaultData* detailData = static_cast<CombatStateDefaultData*>(data.Get());
     Target = detailData->SelectedTarget;
-    if (!IsAlive(detailData->SelectedTarget))
+    if (!IsAlive(Target))
     {
         Target.Reset();
         NextState = State::Search;
+        LOG(TEXT("[CombatState::Start] Target is Not Alive State"));
         return false;
     }
 
     double distance = (Target->GetActorLocation() - Owner->GetActorLocation()).SquaredLength();
     if (distance > RangeLengthSquare)
     {
+        LOG(TEXT("[CombatState::Start] Target out of range : %.3f > %.3f"), distance, RangeLengthSquare);
         ChangeToChase();
         return false;
     }
@@ -1101,7 +1101,7 @@ bool ManeuverState::InitializeData(void)
     currentRotator.Pitch = currentRotator.Roll = 0.0f;
     FQuat yawQuaternion = currentRotator.Quaternion();
 
-    InitialPosition = Owner->GetActorLocation() + Owner->GetActorForwardVector() * Control->Velocity * Timer;
+    InitialPosition = Owner->GetActorLocation() + Owner->GetActorForwardVector() * ConvertFromVelocity(Control->Velocity) * Timer;
     InitialRotation = FRotator(yawQuaternion * WaypointData[0].Rotation);
     Control->Throttle = 0.2f;
 

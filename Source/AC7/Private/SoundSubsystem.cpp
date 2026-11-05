@@ -128,3 +128,32 @@ TWeakObjectPtr<UAudioComponent> USoundSubsystem::GetChannel(const FString& name,
 
     return TWeakObjectPtr<UAudioComponent>(output.Get());
 }
+
+
+void FSoundSet::Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound)
+{
+    Channel = sound->GetChannel(channelName, sound->GetWorld());
+    Sound = sound->GetSound(soundName);
+}
+
+void FSoundSet::BlinkSound(float maxTime, float deltaTime)
+{
+    Timer += deltaTime;
+    if (Timer < maxTime)
+    {
+        if (!bIsPlaying || !Channel->IsPlaying())
+            return;
+    }
+
+    Timer = 0.0f;
+    bIsPlaying = !bIsPlaying;
+
+    if (bIsPlaying)
+        Channel->Stop();
+    else
+        Channel->Play();
+}
+
+void FSoundSet::Stop(void) { if (!Channel->IsPlaying()) return; bIsPlaying = false; Channel->Stop(); }
+void FSoundSet::Play(void) { if (Channel->IsPlaying()) return; bIsPlaying = true; Channel->Play(); }
+bool FSoundSet::IsPlaying(bool atChannel) { return atChannel ? Channel->IsPlaying() : bIsPlaying; }

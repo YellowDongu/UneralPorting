@@ -32,12 +32,12 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
     }
 
 
-    float distance = velocity * DeltaTime * 10.0f;
+    float distance = ConvertFromVelocity(velocity) * DeltaTime;
     FlyDistance -= distance;
 
     SetActorLocation(GetActorLocation() + GetActorForwardVector() * distance);
 
-    if (FCSInfo->IsEmpty())
+    if (!IsAlive(Owner) || !FCSInfo->IsEmpty())
         return;
 
     Rebind((*FCSInfo)[0].Target);
@@ -69,18 +69,18 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
         SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.Rotation(), DeltaTime, rotationSpeed));
 }
 
-void ASemiActiveAntiAirMissile::Rebind(TWeakObjectPtr<class AVehicleBase> newTarget)
+void ASemiActiveAntiAirMissile::Rebind(TWeakObjectPtr<AVehicleBase> newTarget)
 {
     if (Target == newTarget)
         return;
 
     Target.Reset();
     GiveRadarWarn.Unbind();
-    if (TargetRader != nullptr)
+    if (TargetRader.IsValid())
         TargetRader->UnTrace(this);
     TargetRader.Reset();
 
-    if (newTarget == nullptr)
+    if (!IsAlive(newTarget))
         return;
 
     Target = newTarget;
@@ -101,6 +101,7 @@ void ASemiActiveAntiAirMissile::Release()
     //SetActorHiddenInGame(true);
     SetActorTickEnabled(false);
     BodyMesh->SetVisibility(false);
+    FCSInfo = nullptr;
 
     FTimerHandle timerHandle;
     GetWorld()->GetTimerManager().SetTimer(timerHandle, this, &ASemiActiveAntiAirMissile::RetriveObject, 5.0f, false);
@@ -115,10 +116,8 @@ bool ASemiActiveAntiAirMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, 
         return false;
 
     ASemiActiveAntiAirMissile* newInstance = static_cast<ASemiActiveAntiAirMissile*>(output);
-    newInstance->FCSInfo = &static_cast<AAircraft*>(owner.Get())->GetFireControlSystem()->GetCurrentTargets();
-
-    if (newInstance->FCSInfo == nullptr)
-        newInstance->Release(); 
+    Owner = Cast<AAircraft>(owner);
+    newInstance->FCSInfo = &Owner->GetFireControlSystem()->GetCurrentTargets();
 
     return true;
 }

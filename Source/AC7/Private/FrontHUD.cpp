@@ -3,35 +3,45 @@
 
 #include "FrontHUD.h"
 
-#include "Components/TextBlock.h"
-#include "Components/CanvasPanel.h"
-#include "Components/Image.h"
-#include "Blueprint/WidgetTree.h"
 #include "Aircraft.h"
 #include "PlayerPilot.h"
-#include "IFFHandler.h"
+#include "Radar.h"
 #include "LockHUD.h"
+#include "IFFHandler.h"
 #include "AttitudeIndicator.h"
 #include "RadarUI.h"
 #include "StatusUI.h"
 #include "SoundSubsystem.h"
 
+#include "Components/TextBlock.h"
+#include "Components/CanvasPanel.h"
+#include "Components/AudioComponent.h"
+#include "Components/Image.h"
+#include "Blueprint/WidgetTree.h"
+
 void UFrontHUD::BindVehicle(AAircraft* target, APlayerPilot* player)
 {
 	if (target == nullptr) return;
-	binded = true;
+	bBinded = true;
 	
 	FControl* poineter;
 	target->GetControl(poineter);
 	Velocity = &poineter->Velocity;
 	GetPosition = [target]() -> FVector { return target->GetActorLocation(); };
 	GetRotation = [target]() -> FVector { return target->GetActorRotation().Euler(); };
+	PlayerRadar = target->GetRadar();
+
 	IFFHudController->BindPlayer(target, player);
 	LockHUD->BindPlayer(target, player);
 	AttitudeIndicator->BindPlayer(target, player);
 	RadarUI->BindPlayer(target, player);
 	Status->BindPlayer(target, player);
-	MissileWarnSound = GetGameInstance()->GetSubsystem<USoundSubsystem>()->GetSound(TEXT("MissileWarn"));
+
+	USoundSubsystem* sound = GetGameInstance()->GetSubsystem<USoundSubsystem>();
+	SoundSet = MakeShared<FSoundSet>();
+	SoundSet->Sound = sound->GetSound(TEXT("MissileWarn"));
+	SoundSet->Channel = sound->GetChannel(TEXT("MissileWarnChannel"), target->GetWorld());
+	SoundSet->Channel->SetSound(SoundSet->Sound);
 }
 
 void UFrontHUD::NativeConstruct()
@@ -56,10 +66,18 @@ void UFrontHUD::NativeConstruct()
 void UFrontHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-	if (!binded)
+	if (!bBinded)
 		return;
 
 	SpeedMeterText->SetText(FText::FromString(GetSpeedText()));
 	AltitudeIndicatorText->SetText(FText::FromString(GetAltitudeText()));
 	AttitudeIndicator->SetRenderTransformAngle(GetRotation().X);
+
+	if (PlayerRadar->Warning())
+	{
+		float duration = SoundSet->IsPlaying(false) ? SoundSet->Sound->Duration : (PlayerRadar->Alart() ? 0.5f : 0.2f);
+		SoundSet->BlinkSound(duration, InDeltaTime);
+	}
+	else
+		SoundSet->Stop();
 }

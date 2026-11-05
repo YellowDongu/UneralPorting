@@ -34,7 +34,7 @@ private:
 	bool bSelect{ false }, bSoundActive{ false };
 	float SoundTimer{ 10.0f };
 
-	TArray<FTargetInfo>* currentTargets{nullptr};
+	TArray<FTargetInfo>* currentTargets{ nullptr };
 	TMap<TWeakObjectPtr<class AVehicleBase>, TObjectPtr<UUserWidget>> Alive;
 
 	TSharedPtr<LockIndicator> StandardIndicator;
@@ -52,7 +52,8 @@ private:
 
 	FDelegateHandle AddHandle, RemoveHandle;
 
-	TObjectPtr<class USoundBase> Lock, SpecialLock;
+	TObjectPtr<class USoundBase> SpecialLock;
+	TSharedPtr<struct FSoundSet> LockSoundSet{ nullptr };
 	UPROPERTY() TObjectPtr<UAudioComponent> LockSoundChannel{ nullptr };
 
 	float LockSoundMin{ 0.1f };

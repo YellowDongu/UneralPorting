@@ -40,7 +40,7 @@ void AUnGuidedBomb::Tick(float DeltaTime)
     PreviousLocation = CurrentLocation;
 }
 
-void AUnGuidedBomb::Initialize(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked)
+void AUnGuidedBomb::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked)
 {
     AAircraft* aircraft = static_cast<AAircraft*>(owner.Get());
     const FControl& control = aircraft->GetControl();
@@ -62,7 +62,7 @@ void AUnGuidedBomb::Initialize(TWeakObjectPtr<class AVehicleBase> owner, TWeakOb
     ElapsedTime = 0.0f;
     bLanded = false;
     StartPosition = PreviousLocation = location;
-    InitialVelocity = aircraft->GetActorForwardVector() * static_cast<double>(control.Velocity);
+    InitialVelocity = aircraft->GetActorForwardVector() * ConvertFromVelocity(static_cast<double>(control.Velocity));
 
 }
 
@@ -81,9 +81,9 @@ int AUnGuidedBomb::Shoot(TWeakObjectPtr<class AVehicleBase> owner, FTargetInfo* 
     if (newInstance == nullptr)
     {
         UE_LOG(LogTemp, Error, TEXT("[AUnGuidedBomb::Shoot] CREATE ERROR"));
-        return false;
+        return -1;
     }
-    newInstance->Initialize(owner, locked->Target);
+    newInstance->Initialize(this, owner, locked->Target);
 
     bIsCoolTime = true;
     GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AUnGuidedBomb::CoolTimeEnd, coolTime, false);

@@ -68,14 +68,7 @@ class AC7_API UGaugeUI : public UUserWidget
 
 		void CreateGaugeSet(class UCanvasPanel* gaugeCanvas, TSubclassOf<class AMissile> targetBluePrint);
 		void CreateGaugeSet(class UCanvasPanel* gaugeCanvas, TSubclassOf<class AMissile> targetBluePrint, const FGaugeImageSet& imageSet);
-
-		void SetGaugePercentage(float value, int index = 0)
-		{
-			if (index < 0 || index >= GaugeBars.Num())
-				return;
-
-			GaugeBars[index].EditGaugePercentage(value);
-		}
+		void SetGaugePercentage(float value, int index = 0) { if (GaugeBars.IsValidIndex(index)) GaugeBars[index].EditGaugePercentage(value); }
 
 		void StartTimer(UWorld* world, int gaugeNumber, bool Descend = true)
 		{

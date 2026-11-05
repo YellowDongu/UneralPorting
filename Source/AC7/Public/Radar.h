@@ -58,9 +58,9 @@ public:
     void SetAutoFlare() { AutoFlare = true; }
     void ResetWarning() { bAlart = bWarning = false; }
 
-    bool Alart() { return bAlart; }
-    bool Warning() { return bWarning; }
-    float GetRaderDistance() { return RadarRange; }
+    bool Alart(void) { return bAlart; }
+    bool Warning(void) { return bWarning; }
+    float GetRaderDistance(void) { return RadarRange; }
     const TSet<TWeakObjectPtr<class AVehicleBase>>& GetTargets() const { return InDistance; } // Get Enemy Vehicle in Radar range
     const TArray<TWeakObjectPtr<class AVehicleBase>>& GetAllInRange() const { return InRange; } // Get All Vehicle in Radar range
 
@@ -85,6 +85,7 @@ private:
     
     TArray<TWeakObjectPtr<USceneComponent>> flarePod;
     TWeakObjectPtr<class UAudioComponent> Audio{ nullptr };
+    TObjectPtr<FControl> Control{ nullptr };
 
-    USoundBase* FlareFire{ nullptr };
+    TObjectPtr<USoundBase> FlareFire{ nullptr };
 };

@@ -30,21 +30,21 @@ void AFourAirtoAirMissile::Tick(float DeltaTime)
         return;
     }
 
-    float distance = velocity * DeltaTime * 10.0f;
+    float distance = ConvertFromVelocity(velocity) * DeltaTime;
     FlyDistance -= distance;
 
     SetActorLocation(GetActorLocation() + GetActorForwardVector() * distance);
 
-    if (Target == nullptr)
+    if (!Target.IsValid())
     {
         FRotator CurrentRotation = GetActorRotation();
         SetActorRotation(FMath::RInterpTo(CurrentRotation, FRotator(0.0f, CurrentRotation.Yaw, CurrentRotation.Roll), DeltaTime, rotationSpeed));
         return;
     }
 
-    if (!IsValid(Target.Get()) || Target->IsHidden())
+    if (Target->IsHidden())
     {
-        ResetMissileBind();
+        Target = nullptr;
         return;
     }
 

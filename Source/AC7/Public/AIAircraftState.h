@@ -47,9 +47,9 @@ protected:
 	TWeakObjectPtr<class URadar> Radar{ nullptr };
 	TWeakObjectPtr<class UTeamManagementSystem> TeamSystem;
 
-	constexpr static double NearLength = ConvertFromAltitude(500.0);
-	constexpr static double CloseLength = ConvertFromAltitude(1000.0);
-	constexpr static double RangeLength = ConvertFromAltitude(5000.0);
+	constexpr static double NearLength = ConvertFromDistance(500.0);
+	constexpr static double CloseLength = ConvertFromDistance(1000.0);
+	constexpr static double RangeLength = ConvertFromDistance(6000.0);
 	constexpr static double NearLengthSquare = NearLength * NearLength;
 	constexpr static double CloseLengthSquare = CloseLength * CloseLength;
 	constexpr static double RangeLengthSquare = RangeLength * RangeLength;

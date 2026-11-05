@@ -26,5 +26,6 @@ public:
 protected:
 	virtual void Release() override;
 
+	TWeakObjectPtr<class AAircraft> Owner;
 	const TArray<FTargetInfo>* FCSInfo;
 };

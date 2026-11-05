@@ -88,7 +88,7 @@ UFireControlSystem::UFireControlSystem()
 
 void UFireControlSystem::Update(float DeltaTime)
 {
-	bulletTime = FMath::Max(bulletTime + DeltaTime, GunRPM);
+	bulletTime = FMath::Min(bulletTime + DeltaTime, GunRPM);
 
 	if (currentTargets.IsEmpty())
 		return;
@@ -152,6 +152,10 @@ void UFireControlSystem::SystemIntegration(TWeakObjectPtr<class URadar> _radar, 
 {
 	if (_radar == nullptr || WeaponContainer == nullptr)
 		return;
+
+	AAircraft* Owner = Cast<AAircraft>(GetOwner());
+	if (Owner != nullptr)
+		Owner->GetControl(Control);
 
 	Radar = _radar;
 	AddHandle = Radar->AddTarget.AddUObject(this, &UFireControlSystem::AddTarget);
@@ -627,7 +631,7 @@ bool UFireControlSystem::ShootGun()
 	bulletTime = 0.0f;
 	FRotator rotation = GetOwner()->GetActorRotation();
 	//factory->Instantiate(GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 50.0f, GetOwner()->GetActorRotation(), 4500.0f, GetOwner());
-	factory->Instantiate(*world, GetOwner()->GetActorLocation() + rotation.RotateVector(GunPosition * 0.5), rotation, 4500.0f);
+	factory->Instantiate(*world, GetOwner()->GetActorLocation() + rotation.RotateVector(GunPosition * 0.5), rotation, ConvertFromVelocity(Control->Velocity) * 10.0f);
 	return true;
 }
 

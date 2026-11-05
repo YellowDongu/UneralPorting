@@ -169,25 +169,34 @@ TSharedPtr<USpawnCondition> ASpawnTrigger::CreateSpawnCondition()
 	return newInstnace;
 }
 
-void ASpawnTrigger::CreateInstance(int index, UObjectFactory* objectFactory, UTeamManagementSystem* teamSystem, TArray<TWeakObjectPtr<class AVehicleBase>>& instanceList)
+void ASpawnTrigger::CreateInstance(int index, UObjectFactory* objectFactory, UTeamManagementSystem* teamSystem, TArray<TWeakObjectPtr<AVehicleBase>>& instanceList)
 {
-	auto& item = list[index];
-	instanceList[index] = objectFactory->Instantiate(item);
-	if (instanceList[index] == nullptr)
+	static int32 AntiRecursionCounter = 0;
+
+	if (AntiRecursionCounter >= 10)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ASpawnTrigger::CreateInstance] AntiRecursionCounter OverFlow"));
+		// need? add : end process
 		return;
+	}
 
-	instanceList[index]->SetActorLocationAndRotation(item.GlobalPosition(), item.GlobalRotation());
-	instanceList[index]->SquadDataReset();
+	AntiRecursionCounter++;
+	auto& item = list[index];
 
-	TWeakObjectPtr<AVehicleBase> Leader;
+	TWeakObjectPtr<AVehicleBase> leader{nullptr};
 	if (item.LeaderIndex != -1)
 	{
 		if (instanceList[item.LeaderIndex] == nullptr)
 			CreateInstance(item.LeaderIndex, objectFactory, teamSystem, instanceList);
-		Leader = instanceList[item.LeaderIndex];
+		leader = instanceList[item.LeaderIndex];
 	}
 
-	teamSystem->TeamAdd(instanceList[index]->GetSquadData(), Leader);
+	instanceList[index] = objectFactory->Instantiate(item, teamSystem, leader, GetWorld());
+	if (instanceList[index] == nullptr)
+		return;
+
+	instanceList[index]->SetActorLocationAndRotation(item.GlobalPosition(), item.GlobalRotation());
+	AntiRecursionCounter--;
 }
 
 void ASpawnTrigger::UnionFind()

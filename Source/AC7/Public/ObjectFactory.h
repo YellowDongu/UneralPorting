@@ -26,6 +26,7 @@ public:
 	//virtual void PostLogin(APlayerController* NewPlayer) override;
 
 	TWeakObjectPtr<class AVehicleBase> Instantiate(FSpawnInfomation& spawnInfomation) { TWeakObjectPtr<class AController> dummy; return Instantiate(*GetWorld(), spawnInfomation, dummy); }
+	TWeakObjectPtr<class AVehicleBase> Instantiate(FSpawnInfomation& spawnInfomation, class UTeamManagementSystem* teamSystem, const TWeakObjectPtr<AVehicleBase>& Leader, UWorld* world);
 	TWeakObjectPtr<class AVehicleBase> Instantiate(UWorld& world, FSpawnInfomation& spawnInfomation, TWeakObjectPtr<class AController>& output);
 	TWeakObjectPtr<class AVehicleBase> Instantiate(UWorld& world, EVehicleID vehicleID);
 	TWeakObjectPtr<class AAIPilot> Instantiate(UWorld* world, const FSpawnInfomation& infomation);

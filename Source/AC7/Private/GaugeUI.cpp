@@ -25,15 +25,11 @@ void UGaugeUI::FGauge::StartTimer(UWorld* world) // deprecated
 bool UGaugeUI::FGauge::Tick(float deltaTime)
 {
 	Timer -= deltaTime;
-	if (Timer < 0.0f)
-	{
-		Timer = 0.0f;
-		return true;
-	}
 
 	float progress = 1.0f - Timer / TimeMax;
 	ProgressBar->SetPercent(progress);
-	return false;
+
+	return Timer < 0.0f;
 }
 
 void UGaugeUI::FGauge::ActiveTimer()

@@ -20,9 +20,9 @@ UWeaponInterface::UWeaponInterface()
 
 void UWeaponInterface::Update(float DeltaTime)
 {
-	bulletTime = FMath::Max(bulletTime + DeltaTime, GunRPM);
+	bulletTime = FMath::Min(bulletTime + DeltaTime, GunRPM);
 
-	if (currentTargets.IsEmpty())
+	if (currentTargets.IsEmpty() || !IsAlive(currentTargets[0].Target))
 	{
 		*TurretYaw += FMath::Sign(FMath::UnwindDegrees(-*TurretYaw)) * DeltaTime * TurretYawRotateSpeed;
 		*TurretPitch += FMath::Sign(FMath::UnwindDegrees(-*TurretPitch)) * DeltaTime * TurretPitchRotateSpeed;

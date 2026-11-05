@@ -18,11 +18,12 @@ public:
 
     virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output); // return false at cooltime
     virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked); // return false at cooltime
-    virtual void Initialize(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked);
+    virtual void Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked);
     virtual int Shoot(TWeakObjectPtr<class AVehicleBase> owner, FTargetInfo* locked);
 
     void ForceChangeTarget(TWeakObjectPtr<AActor> nextTarget);
     virtual void Lock(FTargetInfo& targetData, float DeltaTime, const FVector& forward, const FVector& position);
+    virtual void Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectPtr<class AVehicleBase>& owner);
 protected:
     //virtual TWeakObjectPtr<AMissile> CreateProjectile(TWeakObjectPtr<class AVehicleBase> targets) PURE_VIRTUAL(AMissile::CreateProjectile, return nullptr;);
     virtual TWeakObjectPtr<AMissile> CreateProjectile(TWeakObjectPtr<class AVehicleBase> targets);
