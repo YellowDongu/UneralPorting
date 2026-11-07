@@ -42,7 +42,7 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
 
     Rebind((*FCSInfo)[0].Target);
 
-    if (!Target.IsValid() || !(*FCSInfo)[0].IsLock())
+    if (!IsAlive(Target) || !(*FCSInfo)[0].IsLock())
         return;
     {
         //FRotator CurrentRotation = GetActorRotation();
@@ -51,7 +51,6 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
 
     FVector vector = Target->GetActorLocation() - GetActorLocation();
     float sqrMagnitude = vector.SizeSquared();
-    //SendDistance(sqrMagnitude);
     GiveRadarWarn.ExecuteIfBound(sqrMagnitude);
 
     if (sqrMagnitude < ImpactDistance)

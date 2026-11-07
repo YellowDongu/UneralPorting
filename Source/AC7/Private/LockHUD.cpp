@@ -61,7 +61,7 @@ void ULockHUD::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 		else
 		{
 			float duration = LockSoundSet->Sound->Duration;
-			duration = LockSoundSet->IsPlaying(false) ? duration : FMath::Max(LockSoundMin, duration * (*currentTargets)[0].Lock) * 1.25f;
+			duration = LockSoundSet->IsPlaying(false) ? duration : FMath::Max(LockSoundMin, duration * (*currentTargets)[0].Lock);
 			LockSoundSet->BlinkSound(duration, DeltaTime);
 		}
 

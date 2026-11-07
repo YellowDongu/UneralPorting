@@ -33,15 +33,16 @@ void AStandardMissile::Tick(float DeltaTime)
     FlyDistance -= distance;
 
 	SetActorLocation(GetActorLocation() + GetActorForwardVector() * distance);
+    FRotator CurrentRotation = GetActorRotation();
 
     if (Target == nullptr)
     {
-        FRotator CurrentRotation = GetActorRotation();
         SetActorRotation(FMath::RInterpTo(CurrentRotation, FRotator(0.0f, CurrentRotation.Yaw, CurrentRotation.Roll), DeltaTime, rotationSpeed));
         return;
     }
 
-    if (!IsValid(Target.Get()) || Target->IsHidden())
+    //if (!IsValid(Target.Get()) || Target->IsHidden())
+    if (!IsAlive(Target))
     {
         ResetMissileBind();
         return;
@@ -56,14 +57,12 @@ void AStandardMissile::Tick(float DeltaTime)
     {
         UE_LOG(LogTemp, Log, TEXT("[AStandardMissile::Tick] Collide -> %s"), *Target->GetName());
         GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), GetActorLocation(), 150.0f, 2.0f);
-		AVehicleBase* vehicle = Cast<AVehicleBase>(Target.Get());
-        if (vehicle != nullptr)
-            vehicle->HPDamage(damage);
+        Target->HPDamage(damage);
 
         Release();
     }
     else
-        SetActorRotation(FMath::RInterpTo(GetActorRotation(), vector.GetSafeNormal().Rotation(), DeltaTime, rotationSpeed));
+        SetActorRotation(FMath::RInterpTo(CurrentRotation, vector.Rotation(), DeltaTime, rotationSpeed));
 }
 
 void AStandardMissile::Release()

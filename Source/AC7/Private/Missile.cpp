@@ -41,10 +41,12 @@ void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> o
     //Trail->ReinitializeSystem();
     Trail->Activate();
 
-    if (!IsAlive(locked))
-        return;
-
     Target = locked;
+    if (!IsAlive(Target))
+    {
+        UE_LOG(LogTemp, Error, TEXT("[AMissile::Shoot] !IsAlive(Target)"));
+        return;
+    }
     TargetRader = locked->FindComponentByClass<URadar>();
     if (TargetRader == nullptr)
         return;
@@ -87,7 +89,7 @@ int AMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, FTargetInfo* locke
     return 1;
 }
 
-void AMissile::ForceChangeTarget(TWeakObjectPtr<AActor> nextTarget)
+void AMissile::ForceChangeTarget(TWeakObjectPtr<class AVehicleBase> nextTarget)
 { 
     GiveRadarWarn.Unbind();
     if (TargetRader != nullptr)
@@ -108,8 +110,8 @@ void AMissile::Lock(FTargetInfo& targetData, float DeltaTime, const FVector& for
     FVector direction = targetData.Target->GetActorLocation() - position;
     targetData.CalculateDistance(direction, false, true);
 
-    bool lockable = targetData.DistanceSquared > DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos;
-    targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? DeltaTime : -DeltaTime), 0.0f, 1.0f);
+    bool lockable = targetData.DistanceSquared < DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos;
+    targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? -DeltaTime : DeltaTime), 0.0f, 1.0f);
 }
 
 void AMissile::Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectPtr<class AVehicleBase>& owner)
@@ -118,8 +120,8 @@ void AMissile::Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectP
     FVector forward = owner->GetActorForwardVector();
     targetData.CalculateDistance(direction, false, true);
 
-    bool lockable = targetData.DistanceSquared > DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos;
-    targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? DeltaTime : -DeltaTime), 0.0f, 1.0f);
+    bool lockable = targetData.DistanceSquared < DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos;
+    targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? -DeltaTime : DeltaTime), 0.0f, 1.0f);
 }
 
 

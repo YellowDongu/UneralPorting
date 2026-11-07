@@ -56,7 +56,7 @@ private:
 	TSharedPtr<struct FSoundSet> LockSoundSet{ nullptr };
 	UPROPERTY() TObjectPtr<UAudioComponent> LockSoundChannel{ nullptr };
 
-	float LockSoundMin{ 0.1f };
-	float LockSoundMax{ 0.4f };
+	float LockSoundMin{ 0.05f };
+	float LockSoundMax{ 0.3f };
 	float LockSoundDuration{ 0.75f };
 };

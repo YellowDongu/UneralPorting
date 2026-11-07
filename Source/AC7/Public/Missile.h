@@ -21,7 +21,7 @@ public:
     virtual void Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked);
     virtual int Shoot(TWeakObjectPtr<class AVehicleBase> owner, FTargetInfo* locked);
 
-    void ForceChangeTarget(TWeakObjectPtr<AActor> nextTarget);
+    void ForceChangeTarget(TWeakObjectPtr<class AVehicleBase> nextTarget);
     virtual void Lock(FTargetInfo& targetData, float DeltaTime, const FVector& forward, const FVector& position);
     virtual void Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectPtr<class AVehicleBase>& owner);
 protected:
@@ -81,7 +81,7 @@ protected:
 
     FTimerHandle CooldownTimerHandle;
     TWeakObjectPtr<class URadar> TargetRader{ nullptr };
-    TWeakObjectPtr<AActor> Target{ nullptr };
+    TWeakObjectPtr<class AVehicleBase> Target{ nullptr };
 	TWeakObjectPtr<class UStaticMeshComponent> BodyMesh{ nullptr };
 
     UPROPERTY(EditAnywhere)

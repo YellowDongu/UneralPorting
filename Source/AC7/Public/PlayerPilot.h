@@ -44,16 +44,17 @@ public:
 	void YokeZPlus(void) { Control->Yoke.Z += 1.0; }
 	void YokeZMinus(void) { Control->Yoke.Z -= 1.0; }
 
-	//virtual void BeginPlay() override;
-	//virtual void PostInitProperties() override;
-	//virtual void PreInitializeComponents() override;
-	//virtual void PostInitializeComponents() override;
-	virtual void SetupInputComponent() override;
+	virtual void BeginPlay(void) override;
+	//virtual void PostInitProperties(void) override;
+	//virtual void PreInitializeComponents(void) override;
+	//virtual void PostInitializeComponents(void) override;
+	virtual void SetupInputComponent(void) override;
 	virtual void Tick(float DeltaTime) override;
 
 	void CheatEndMission();
 
 	void Attach(class AAircraft* aircraft);
+	void Detach(void);
 	void LinkHUD(void);
 	void CameraExplosionShake(float duration = 0.5f, float attenuation = 0.4f, float strength = 1.0f);
 private:
@@ -74,7 +75,8 @@ private:
 	TArray<int> Container;
 
 	TWeakObjectPtr<UAudioComponent> GunChannel;
-	TObjectPtr<class USoundBase> ShootSound, SpecialShootSound, GunSound;
+	TObjectPtr<class USoundBase> ShootSound, SpecialShootSound;
+	TSharedPtr<struct FSoundSet> GunSoundSet;
 
 	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Camera")
 	//TSubclassOf<class UCameraShakeBase> ExplosionShake;

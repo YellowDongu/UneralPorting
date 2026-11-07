@@ -126,19 +126,77 @@ void URadar::DeployFlare()
 	if (flarePod.IsEmpty())
 		return;
 
+	UObjectFactory* objectFactory = GetWorld()->GetSubsystem<UObjectFactory>();
+	AVehicleBase* owner = StaticCast<AVehicleBase*>(GetOwner());
+	float velocity = Control != nullptr ? Control->Velocity : 0.0f;
+
+	int TotalCount = Tracing.Num();
+	int SubFunctionCount = flarePod.Num();
+	int TotalCalls = DeployAmount * SubFunctionCount;
+	int BaseCount = TotalCount / TotalCalls;
+	int Remainder = TotalCount % TotalCalls;
+	DeployAmount--;
+
+
+	auto iterator = Tracing.CreateConstIterator();
+	TArray<TWeakObjectPtr<AMissile>> list;
+
+	for (int i = 0; i < SubFunctionCount; ++i)
+	{
+		const int ObjectCount = BaseCount + (i < Remainder ? 1 : 0);
+
+		for (int j = 0; j < ObjectCount; ++j)
+		{
+			if (!iterator)
+				break;
+
+			list.Add(*iterator);
+			++iterator;
+		}
+	}
+
+	BaseCount = list.Num() / SubFunctionCount;
+	Remainder = list.Num() % SubFunctionCount;
+	int StartIndex = 0;
+
+	for (int i = 0; i < SubFunctionCount; ++i)
+	{
+		auto& item = flarePod[i];
+		TWeakObjectPtr<AFlare> newInstance = objectFactory->GetFlare(owner, item.Get(), velocity);
+
+		const int Length = BaseCount + (i < Remainder ? 1 : 0);
+
+		for (int j = 0; j < Length; ++j)
+		{
+			if (!list[StartIndex + j].IsValid()) continue;
+			list[StartIndex + j]->ForceChangeTarget(newInstance);
+		}
+
+		StartIndex += Length;
+	}
+
+	UGameplayStatics::PlaySoundAtLocation(this, FlareFire, GetOwner()->GetActorLocation());
+
+	if (DeployAmount <= 0)
+		GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+
+	/*
 	DeployAmount--;
 
 	int TargetNum = Tracing.Num();
 	if (TargetNum > 4) TargetNum /= 2;
+
+	TArray<AMissile> untraceTarget;
+	untraceTarget.Reserve(TargetNum);
+
 	int SubTargetNum = TargetNum / flarePod.Num();
 	int length = 0, i = 0;
 
-	UObjectFactory* objectFactory = GetWorld()->GetSubsystem<UObjectFactory>();
-	check(objectFactory);
+
 	for (auto& item : flarePod)
 	{
-		TWeakObjectPtr<AFlare> newInstance = objectFactory->GetFlare(item.Get());
-		length = FMath::Min(i + SubTargetNum, flarePod.Num());
+		TWeakObjectPtr<AFlare> newInstance = objectFactory->GetFlare(owner, item.Get(), velocity);
+		length = FMath::Min(i + SubTargetNum, Tracing.Num());
 		for (auto& missile : Tracing)
 		{
 			if (i++ >= length) break;
@@ -151,6 +209,7 @@ void URadar::DeployFlare()
 
 	if (DeployAmount < 0)
 		GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+		*/
 }
 
 void URadar::StartDeployFlare()
@@ -189,147 +248,6 @@ void URadar::CallWarning(double squareDistance)
 	if (squareDistance <= alartDistance)
 		bAlart = true;
 
-	UE_LOG(LogTemp, Warning, TEXT("[URadar::CallWarning] %s to %s"), bAlart ? TEXT("Alart") : TEXT("Warning"), *GetOwner()->GetName());
+	//UE_LOG(LogTemp, Warning, TEXT("[URadar::CallWarning] %s to %s"), bAlart ? TEXT("Alart") : TEXT("Warning"), *GetOwner()->GetName());
 	bWarning = true;
 }
-
-//public void DeployFlare(AudioSource source, AudioClip sound)
-//{
-//    if (Deploying)
-//        return;
-//
-//    if (FlareCount <= 0)
-//        return;
-//
-//    StartCoroutine(Deploy(source, sound));
-//    StartCoroutine(FlareCoolTime());
-//}
-//
-//public IEnumerator Deploy(AudioSource source, AudioClip sound)
-//{
-//    Deploying = true;
-//    int Count = deployCount;
-//    float Timer = 0;
-//    while (Count > 0)
-//    {
-//        Timer += Time.deltaTime;
-//        if (Timer < rpm)
-//        {
-//            yield return null;
-//            continue;
-//        }
-//        Timer = 0.0f;
-//        Count--;
-//
-//        if (Tracing.Count > 0)
-//        {
-//            int count = (Tracing.Count + flarePod.Length - 1) / flarePod.Length; // ºü¸¥ ³ª´°¼À ¿Ã¸²
-//            int i = 0, length;
-//            Missile[] collection = Tracing.ToArray();
-//            Tracing.Clear();
-//
-//            foreach(var item in flarePod)
-//            {
-//                Flare newInstance = GameMaster.Instance.Factory.ShootFlare(item);
-//                length = Mathf.Clamp(i + count, 0, collection.Length);
-//                for (; i < length; i++)
-//                {
-//                    collection[i].ChangeTarget(newInstance.Distruption());
-//                    collection[i].MissileWarning -= Warning;
-//                }
-//                i += count;
-//            }
-//            source.PlayOneShot(sound);// GameMaster.GetInstance().Sound().PlayOnce(source, sound);
-//        }
-//        else
-//        {
-//            foreach(var item in flarePod)
-//                GameMaster.Instance.Factory.ShootFlare(item);
-//            source.PlayOneShot(sound);// GameMaster.GetInstance().Sound().PlayOnce(source, sound);
-//        }
-//
-//        yield return null;
-//    }
-//    Deploying = false;
-//}
-//
-//public IEnumerator Deploy()
-//{
-//    Deploying = true;
-//    int Count = deployCount;
-//    float Timer = 0;
-//    while (Count > 0)
-//    {
-//        Timer += Time.deltaTime;
-//        if (Timer < rpm)
-//        {
-//            yield return null;
-//            continue;
-//        }
-//        Timer = 0.0f;
-//        Count--;
-//
-//        if (Tracing.Count > 0)
-//        {
-//            int count = (Tracing.Count + flarePod.Length - 1) / flarePod.Length; // ºü¸¥ ³ª´°¼À ¿Ã¸²
-//            int i = 0, length;
-//            Missile[] collection = Tracing.ToArray();
-//            Tracing.Clear();
-//
-//            foreach(var item in flarePod)
-//            {
-//                Flare newInstance = GameMaster.Instance.Factory.ShootFlare(item);
-//                length = Mathf.Clamp(i + count, 0, collection.Length);
-//                for (; i < length; i++)
-//                {
-//                    collection[i].ChangeTarget(newInstance.Distruption());
-//                    collection[i].MissileWarning -= Warning;
-//                }
-//                i += count;
-//            }
-//        }
-//        else
-//            foreach(var item in flarePod)
-//            GameMaster.Instance.Factory.ShootFlare(item);
-//
-//        yield return null;
-//    }
-//    Deploying = false;
-//}
-//
-//public void AutoDeployFlare()
-//{
-//    if (!AutoFlare || Deploying)
-//        return;
-//
-//    if (FlareCount <= 0)
-//        return;
-//
-//    if (Tracing.Count >= 1)
-//    {
-//        StartCoroutine(Deploy());
-//        StartCoroutine(FlareCoolTime());
-//    }
-//}
-//
-//public IEnumerator FlareCoolTime(Action<float> coolTimeMethod = null)
-//{
-//    FlareCount--;
-//    float timer = flareCoolTime;
-//
-//    if (coolTimeMethod == null)
-//        while (timer > 0)
-//        {
-//            timer -= Time.deltaTime;
-//            yield return null;
-//        }
-//    else
-//        while (timer > 0)
-//        {
-//            timer -= Time.deltaTime;
-//            coolTimeMethod(timer);
-//            yield return null;
-//        }
-//
-//    FlareCount++;
-//}

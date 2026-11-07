@@ -42,6 +42,7 @@ void AFlare::BeginPlay()
 
 void AFlare::Tick(float DeltaTime)
 {
+    constexpr float falseGravity = 980.0 * 0.25;
 	Super::Tick(DeltaTime);
     CurrentLifeTime -= DeltaTime;
     if (CurrentLifeTime <= 0.0f)
@@ -50,10 +51,20 @@ void AFlare::Tick(float DeltaTime)
         return;
     }
 
-    CurrentSpeed = FMath::Lerp(ShootSpeed, MinimumSpeed, 1.0f - CurrentLifeTime / LifeTime);
-    FVector Direction = GetActorForwardVector();
-    SetActorLocation(GetActorLocation() + Direction * CurrentSpeed * DeltaTime);
-    FlareBodyDirection.SetValue(FVector3f(Direction));
+    //CurrentSpeed = FMath::Lerp(ShootSpeed, MinimumSpeed, 1.0f - CurrentLifeTime / LifeTime);
+    //FVector Direction = GetActorForwardVector();
+    //SetActorLocation(GetActorLocation() + Direction * CurrentSpeed * DeltaTime);
+    //FlareBodyDirection.SetValue(FVector3f(Direction));
+    
+    //CurrentVelocity.Z += GetWorld()->GetGravityZ() * DeltaTime;
+    CurrentVelocity.Z += -falseGravity * DeltaTime;
+
+    CurrentSpeed = CurrentVelocity.Size();
+    float TargetSpeed = FMath::Max(CurrentSpeed, falseGravity);
+    CurrentVelocity = CurrentVelocity.GetSafeNormal() * FMath::FInterpTo(CurrentSpeed, falseGravity, DeltaTime, 0.5f);
+    SetActorLocation(GetActorLocation() + CurrentVelocity * DeltaTime);
+
+    FlareBodyDirection.SetValue(FVector3f(CurrentVelocity.GetSafeNormal()));
 }
 
 void AFlare::Disappear()
@@ -87,18 +98,24 @@ void AFlare::RetriveObject()
 
 void AFlare::Shoot(USceneComponent* flarePod, const FVector& DirectionVector)
 {
-    //SetActorEnableCollision(true);
-    //SetActorHiddenInGame(false);
-    //SetActorTickEnabled(true);
-
 	const FTransform& WorldTransform = flarePod->GetComponentTransform();
 	SetActorTransform(WorldTransform);
 
     //double velocity = FMath::Max(DirectionVector.Length(), 1.0);
-    Body->SetVisibility(true);
-    SetActorTickEnabled(true);
     SetActorEnableCollision(true);
+    SetActorHiddenInGame(false);
+    SetActorTickEnabled(true);
+    Body->SetVisibility(true);
+
+	CurrentVelocity = FMath::VRandCone(GetActorForwardVector(), FMath::DegreesToRadians(15.0f)) * ConvertFromVelocity(50.0);
+
+    if (!DirectionVector.IsZero())
+    {
+        CurrentVelocity += DirectionVector;
+        SetActorRotation(CurrentVelocity.Rotation().Quaternion());
+        ShootSpeed = DirectionVector.Length();
+    }
 
     CurrentLifeTime = LifeTime;
-    ShootSpeed = 330.0;
+	HP = TNumericLimits<int>::Max();
 }

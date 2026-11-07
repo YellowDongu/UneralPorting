@@ -31,42 +31,44 @@ APlayerPilot::APlayerPilot()
     bEnableMouseOverEvents = false;
 }
 
+void APlayerPilot::BeginPlay(void)
+{
+    Super::BeginPlay();
+
+    USoundSubsystem* soundSubsystem = GetGameInstance()->GetSubsystem<USoundSubsystem>();
+    ShootSound = soundSubsystem->GetSound(TEXT("MissileFired"));
+    SpecialShootSound = soundSubsystem->GetSound(TEXT("MissileFired2"));
+    GunSoundSet = MakeShared<FSoundSet>();
+    GunSoundSet->Initialize(TEXT("Valcan20mm"), TEXT("GunChannel"), soundSubsystem);
+    StaticCast<USoundWave*>(GunSoundSet->Sound)->bLooping = true;
+}
+
 void APlayerPilot::SetupInputComponent(void)
 {
     Super::SetupInputComponent();
 
-    //if (UEnhancedInputComponent* Input =
-    //    Cast<UEnhancedInputComponent>(PlayerInputComponent))
-    //{
-    //    Input->BindAction(
-    //        InteractAction,
-    //        ETriggerEvent::Started,
-    //        this,
-    //        &AMyCharacter::Interact
-    //    );
-    //}
-
+    //if (UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent)) { Input->BindAction(InteractAction, ETriggerEvent::Started, this, &AMyCharacter::Interact); }
     //FInputKeyBinding& result = InputComponent->BindKey(EKeys::T, IE_Pressed, this, &APlayerPilot::ChangeTarget); => 바인딩을 변경시킬 수 있음
     //InputComponent->KeyBindings.Remove(result);
+
     InputComponent->BindKey(EKeys::T, IE_Pressed, this, &APlayerPilot::ChangeTarget);
     
     InputComponent->BindKey(EKeys::G, IE_Pressed, this, &APlayerPilot::GearDeploy);
     InputComponent->BindKey(EKeys::E, IE_Pressed, this, &APlayerPilot::ChangeMissile);
     InputComponent->BindKey(EKeys::F, IE_Pressed, this, &APlayerPilot::DeployFlare);
     InputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &APlayerPilot::ShootWeapon);
-    //InputComponent->BindKey(EKeys::LeftControl, IE_Repeat, this,&APlayerPilot::ShootGun);
+    //InputComponent->BindKey(EKeys::LeftControl, IE_Pressed, this,&APlayerPilot::ShootGun);
+    //InputComponent->BindKey(EKeys::LeftControl, IE_Released, this,&APlayerPilot::ShootGun);
 
     InputComponent->BindKey(EKeys::NumPadFive, IE_Pressed, this, &APlayerPilot::ResetCamera);
 
     InputComponent->BindKey(EKeys::NumPadSix, IE_Pressed, this, &APlayerPilot::YawCamRotatePlus);
     InputComponent->BindKey(EKeys::NumPadSix, IE_Released, this, &APlayerPilot::YawCamRotateMinus);
-
     InputComponent->BindKey(EKeys::NumPadFour, IE_Released, this, &APlayerPilot::YawCamRotatePlus);
     InputComponent->BindKey(EKeys::NumPadFour, IE_Pressed, this, &APlayerPilot::YawCamRotateMinus);
 
     InputComponent->BindKey(EKeys::NumPadTwo, IE_Pressed, this, &APlayerPilot::PitchCamRotatePlus);
     InputComponent->BindKey(EKeys::NumPadTwo, IE_Released, this, &APlayerPilot::PitchCamRotateMinus);
-
     InputComponent->BindKey(EKeys::NumPadEight, IE_Released, this, &APlayerPilot::PitchCamRotatePlus);
     InputComponent->BindKey(EKeys::NumPadEight, IE_Pressed, this, &APlayerPilot::PitchCamRotateMinus);
 
@@ -93,13 +95,13 @@ void APlayerPilot::ChangeTarget()
     TWeakObjectPtr<UFireControlSystem> fcs = Aircraft->GetFireControlSystem();
     fcs->GetCurrentTargets(currentTargets);
 
-    for (auto item : *currentTargets)
+    for (auto& item : *currentTargets)
         SetSelectTargetUI.Broadcast(item.Target.Get(), false);
 
     fcs->ChangeTarget();
 
     if (fcs->GetSelectSpecial())
-        for (auto item : *currentTargets)
+        for (auto& item : *currentTargets)
             SetSelectTargetUI.Broadcast(item.Target.Get(), true);
     else if(!currentTargets->IsEmpty())
         SetSelectTargetUI.Broadcast((*currentTargets)[0].Target.Get(), true);
@@ -121,9 +123,15 @@ void APlayerPilot::ShootWeapon(void)
 
 void APlayerPilot::ShootGun(void)
 {
+    if (bShootGun != Super::IsInputKeyDown(EKeys::LeftControl))
+    {
+        bShootGun = !bShootGun;
 
-    Aircraft->GetFireControlSystem()->ShootGun();
-    //if (attachedAircraft->GetFireControlSystem()->ShootGun())
+        if (bShootGun)
+            GunSoundSet->Play();
+        else
+            GunSoundSet->Stop();
+    }
 }
 
 void APlayerPilot::ResetCamera(void) { ThirdCameraArm->SetRelativeRotation(FQuat::Identity); }
@@ -182,13 +190,13 @@ void APlayerPilot::Tick(float DeltaTime)
 
     bool w = Super::IsInputKeyDown(EKeys::W);
     bool s = Super::IsInputKeyDown(EKeys::S);
-    Control->isAirBrakeOn = s;
 
     static constexpr float MinValue = 1.0f;
     static constexpr float MaxValue = 2.5f;
 
     if (w)
     {
+        Control->isAirBrakeOn = false;
         if (s)
         {
             Control->Throttle = 0.2f;
@@ -202,20 +210,31 @@ void APlayerPilot::Tick(float DeltaTime)
     }
     else
     {
-        Control->Throttle = 0.2f;
         Control->bActiveHighGTurn = false;
+        if (s)
+        {
+            Control->Throttle = 0.1f;
+            Control->isAirBrakeOn = true;
+        }
+        else
+        {
+            Control->Throttle = 0.2f;
+            Control->isAirBrakeOn = false;
+        }
     }
 
-    bool gun = Super::IsInputKeyDown(EKeys::LeftControl);
-    if (gun)
-        Aircraft->GetFireControlSystem()->ShootGun();
-
-    if (bShootGun != gun)
+    if (bShootGun != Super::IsInputKeyDown(EKeys::LeftControl))
     {
-        bShootGun = gun;
+        bShootGun = !bShootGun;
 
-
+        if (bShootGun)
+            GunSoundSet->Play();
+        else
+            GunSoundSet->Stop();
     }
+
+    if (bShootGun)
+        Aircraft->GetFireControlSystem()->ShootGun();
 
     if (TestModuleUpdate())
         return;
@@ -229,8 +248,9 @@ void APlayerPilot::Tick(float DeltaTime)
     if (Super::WasInputKeyJustPressed(EKeys::O))
         CameraExplosionShake(1.0f, 0.4f, 2.0f);
     ThirdCameraArm->AddLocalRotation(FRotator(PitchCamRotate * CamRotateSpeed, YawCamRotate * CamRotateSpeed, 0.0f));
-    return;
+
 #if !UE_BUILD_SHIPPING
+    return;
     Control->Yoke.X = static_cast<double>(Super::IsInputKeyDown(EKeys::Right)) - static_cast<double>(Super::IsInputKeyDown(EKeys::Left));
     Control->Yoke.Z = static_cast<double>(Super::IsInputKeyDown(EKeys::Down)) - static_cast<double>(Super::IsInputKeyDown(EKeys::Up));
     Control->Yoke.Y = static_cast<double>(Super::IsInputKeyDown(EKeys::D)) - static_cast<double>(Super::IsInputKeyDown(EKeys::A));
@@ -250,16 +270,16 @@ void APlayerPilot::Tick(float DeltaTime)
     if (Super::WasInputKeyJustPressed(EKeys::T))
     {
         TArray<FTargetInfo>* currentTargets;
-
         TWeakObjectPtr<UFireControlSystem> fcs = Aircraft->GetFireControlSystem();
+
         fcs->GetCurrentTargets(currentTargets);
 
-        for (auto item : *currentTargets)
+        for (auto& item : *currentTargets)
             SetSelectTargetUI.Broadcast(item.Target.Get(), false);
 
         fcs->ChangeTarget();
 
-        for (auto item : *currentTargets)
+        for (auto& item : *currentTargets)
             SetSelectTargetUI.Broadcast(item.Target.Get(), true);
     }
 
@@ -339,16 +359,21 @@ void APlayerPilot::Attach(AAircraft* aircraft)
     Container.Reserve(aircraft->GetFireControlSystem()->GetMultiShoot());
     aircraft->SetGear(true, true);
 
-	USoundSubsystem* soundSubsystem = GetGameInstance()->GetSubsystem<USoundSubsystem>();
-    ShootSound = soundSubsystem->GetSound(TEXT("MissileFired"));
-    SpecialShootSound = soundSubsystem->GetSound(TEXT("MissileFired2"));
+    aircraft->AddDamageEvent(AVehicleBase::FOnDamageEvent::FDelegate::CreateWeakLambda(this, [this](AVehicleBase* target)-> void { CameraExplosionShake(0.5f, 0.4f, 1.0f); }));
+}
 
+void APlayerPilot::Detach(void)
+{
+    //if (Aircraft.IsValid())
+    //{
+    //    Aircraft->DetachCamera(PlayerCamera);
+    //    SetViewTarget(nullptr);
+    //}
 
-    //DECLARE_MULTICAST_DELEGATE_OneParam(FOnDamageEvent, AVehicleBase*);
-    aircraft->AddDamageEvent(AVehicleBase::FOnDamageEvent::FDelegate::CreateWeakLambda(this, [this](AVehicleBase* target)-> void
-    {
-        CameraExplosionShake(0.5f, 0.4f, 1.0f);
-    }));
+    Super::UnPossess();
+    Aircraft.Reset();
+    PrimaryActorTick.bStartWithTickEnabled = false;
+	SetActorTickEnabled(false);
 }
 
 void APlayerPilot::LinkHUD(void)

@@ -57,7 +57,7 @@ UBluePrintCollector* UObjectFactory::GetCollector()
 	return BluePrintCollector;
 }
 
-TWeakObjectPtr<AFlare> UObjectFactory::GetFlare(USceneComponent* flarePod)
+TWeakObjectPtr<AFlare> UObjectFactory::GetFlare(AVehicleBase* shooter, USceneComponent* flarePod, float velocity)
 {
 	TWeakObjectPtr<AFlare> newInstance = Get<AFlare>(FlarePool);
 
@@ -73,7 +73,7 @@ TWeakObjectPtr<AFlare> UObjectFactory::GetFlare(USceneComponent* flarePod)
 	check(newInstance.Get());
 	check(flarePod);
 
-	newInstance->Shoot(flarePod);
+	newInstance->Shoot(flarePod, shooter->GetActorForwardVector() * velocity + flarePod->GetForwardVector() * ConvertFromVelocity(330.0f));
 	return newInstance;
 }
 
@@ -284,13 +284,27 @@ TWeakObjectPtr<AAIPilot> UObjectFactory::Instantiate(UWorld* world, const FSpawn
 
 void UObjectFactory::Release(AVehicleBase* instance)
 {
+	if (!IsValid(instance)) return;
 	int i = 0;
-	AAIPilot* controller = Cast<AAIPilot>(instance->GetController());
-	if (controller != nullptr)
+
+	AController* attachedController = instance->GetController();
+	if (attachedController != nullptr)
 	{
-		controller->Release();
-		if (Cast<AAIAircraftPilot>(controller) == nullptr)
-			i = 1;
+		AAIPilot* controller = Cast<AAIPilot>(attachedController);
+		if (controller != nullptr)
+		{
+			controller->Release();
+			if (Cast<AAIAircraftPilot>(controller) == nullptr)
+				i = 1;
+
+			Release(ControllerPool[i], attachedController);
+		}
+		else
+		{
+			APlayerPilot* player = Cast<APlayerPilot>(attachedController);
+			if (player != nullptr)
+				player->Detach();
+		}
 	}
 
 	if (instance->IsTGT())
@@ -303,10 +317,9 @@ void UObjectFactory::Release(AVehicleBase* instance)
 	if (Cast<APlayerPilot>(instance->GetController()) != nullptr)
 		bIsPlayerSpawned = false;
 
-	Release(ControllerPool[i], instance->GetController());
 	Release(VehiclePool[static_cast<int>(instance->GetVehicleID())], instance);
 }
 
-void UObjectFactory::Release(AMissile* instance) { Release(MissilePool[static_cast<int>(instance->GetWeaponID())], instance); }
-void UObjectFactory::Release(AFlare* instance) { Release(FlarePool, instance); }
-void UObjectFactory::Release(ABullet* instance) { Release(BulletPool, instance); }
+void UObjectFactory::Release(AMissile* instance) { if (!IsValid(instance)) return; Release(MissilePool[static_cast<int>(instance->GetWeaponID())], instance); }
+void UObjectFactory::Release(AFlare* instance) { if (!IsValid(instance)) return; Release(FlarePool, instance); }
+void UObjectFactory::Release(ABullet* instance) { if (!IsValid(instance)) return; Release(BulletPool, instance); }

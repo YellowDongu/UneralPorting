@@ -75,7 +75,9 @@ public:
 	virtual void Update(float deltaTime);
 
     void ChangeTarget(void);
-    void AddTarget(class AVehicleBase* target);
+    void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target, const FVector& forward, const FVector& position);
+    void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target) { AddTarget(target, GetOwner()->GetActorForwardVector(), GetOwner()->GetActorLocation()); }
+    void AddTarget(AVehicleBase* target);
     void RemoveTarget(class AVehicleBase* target);
 	void ReplaceSelectedTarget(class AVehicleBase* target);
     void SetTarget(const TWeakObjectPtr<class AVehicleBase>& target);
@@ -100,7 +102,7 @@ public:
     static bool CalculateBombLandingPosition(UWorld* World, const FVector& StartPosition, const FVector& InitialVelocity, FVector& OutLandingPosition, float& landingTime);
 
 private:
-    void RefreshTarget();
+    void RefreshTarget(void);
 
 public:
     //===========================================
@@ -117,12 +119,12 @@ public:
     const TArray<FTargetInfo>& GetCurrentTargets() const { return currentTargets; }
 
     void GetSelectSpecial(const bool*& pointer) const { pointer = &bSpecialSelected; }
-    bool GetSelectSpecial() const { return bSpecialSelected; }
-    int GetTeam() const { return Team; }
-    int GetSpecial() const { return special; }
+    bool GetSelectSpecial(void) const { return bSpecialSelected; }
+    int GetTeam(void) const { return Team; }
+    int GetSpecial(void) const { return special; }
     int GetWeaponCount(bool isSpecialWeapon = true) const { if (isSpecialWeapon && special != -1) return MaxCount; return 2; }
-    int GetMultiShoot() const { return multiShoot; }
-    float GetCalculatedBombTime() const { return CalculatedBombTime; }
+    int GetMultiShoot(void) const { return multiShoot; }
+    float GetCalculatedBombTime(void) const { return CalculatedBombTime; }
 
     inline const FWeaponMask& GetMissileAimLayer() const; // 지금 활성화된 무장의 레이어 반환
     inline const FWeaponMask& GetMissileAimLayer(bool isSpecial) const;// 무장(bool값으로 특수무장인지 일반무장인지)의 레이어 반환

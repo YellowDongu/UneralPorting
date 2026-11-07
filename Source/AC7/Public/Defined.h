@@ -177,6 +177,7 @@ public:
 	bool isAirBrakeOn{ false };
 	bool isGearDown{ false };
 	bool bActiveHighGTurn{ false };
+	//bool bGunSwitch{ false };
 	float Velocity = 33.0f;
 
 	float GetHighGTurn(float deltaTime)

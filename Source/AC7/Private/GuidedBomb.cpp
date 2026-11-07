@@ -15,23 +15,28 @@ AGuidedBomb::AGuidedBomb()
 void AGuidedBomb::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+    ClosedArea = MaxRange * 0.21;
+    ClosedArea = ClosedArea * ClosedArea;
 }
 
 void AGuidedBomb::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    if (ElapsedTime >= LandingTime)
+    {
+        UE_LOG(LogTemp, Log, TEXT("[AStandardMissile::Tick] Impact"));
+        GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), TrackedPosition, 150.0f, 2.0f);
+        Explode();
+        return;
+    }
+
     ElapsedTime += DeltaTime;
 
     if (IsValid(Target.Get()) && !Target->IsHidden())
         TrackedPosition = Target->GetActorLocation();
-
-    if (ElapsedTime >= LandingTime)
-    {
-        UE_LOG(LogTemp, Log, TEXT("[AStandardMissile::Tick] Collide -> %s"), *Target->GetName());
-        GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), TrackedPosition, 150.0f, 2.0f);
-        Explode();
-    }
+    else
+        Target = nullptr;
 
     FVector nextPosition = FMath::Lerp(StartPosition, TrackedPosition, ElapsedTime / LandingTime);
     SetActorRotation(FMath::RInterpTo(GetActorRotation(), (nextPosition - GetActorLocation()).Rotation(), DeltaTime, rotationSpeed));
@@ -44,26 +49,53 @@ bool AGuidedBomb::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr
         return false;
 
     TWeakObjectPtr<AGuidedBomb> newInstance = static_cast<AGuidedBomb*>(CreateProjectile().Get());
+    if (!newInstance.IsValid()) return false;
 
+    newInstance->SetActorLocationAndRotation(GetActorLocation(), GetActorRotation(), true);
     newInstance->SetActorEnableCollision(true);
     newInstance->SetActorHiddenInGame(false);
     newInstance->SetActorTickEnabled(true);
-    newInstance->PrimaryActorTick.bStartWithTickEnabled = true;
 
     newInstance->Target = locked;
-
-    newInstance->SetActorLocationAndRotation(GetActorLocation(), GetActorRotation(), true);
     newInstance->bIsProjectile = true;
-
-    bIsCoolTime = true;
-    GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AGuidedBomb::CoolTimeEnd, coolTime, false);
 
     newInstance->StartPosition = GetActorLocation();
     newInstance->TrackedPosition = locked->GetActorLocation();
-    newInstance->LandingTime = static_cast<float>((newInstance->TrackedPosition.Z - GetActorLocation().Z) / 980.0) * 0.8f;
-    
+    newInstance->LandingTime = static_cast<float>((newInstance->StartPosition.Z - newInstance->TrackedPosition.Z) / 980.0) * 0.8f;
+
+    bIsCoolTime = true;
+    GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AGuidedBomb::CoolTimeEnd, coolTime, false);
     output = this;
     return true;
+}
+
+void AGuidedBomb::Lock(FTargetInfo& targetData, float DeltaTime, const FVector& forward, const FVector& position)
+{
+    FVector direction = targetData.Target->GetActorLocation() - position;
+    FVector normal = forward;
+
+    direction.Z = normal.Z = 0.0;
+    normal = normal.GetSafeNormal();
+
+    targetData.CalculateDistance(direction, false, true);
+
+    bool lockable = targetData.DistanceSquared < ClosedArea || (targetData.DistanceSquared < DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), normal) > AngleCos);
+    targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? -DeltaTime : DeltaTime), 0.0f, 1.0f);
+}
+
+void AGuidedBomb::Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectPtr<class AVehicleBase>& owner)
+{
+    //Lock(targetData, DeltaTime, owner->GetActorForwardVector(), owner->GetActorLocation());
+    FVector direction = targetData.Target->GetActorLocation() - owner->GetActorLocation();
+    FVector forward = owner->GetActorForwardVector();
+    direction.Z = forward.Z = 0.0;
+    forward = forward.GetSafeNormal();
+
+    targetData.CalculateDistance(direction, false, true);
+
+    bool lockable = targetData.DistanceSquared < ClosedArea || (targetData.DistanceSquared < DistanceSquare && FVector::DotProduct(direction.GetSafeNormal(), forward) > AngleCos);
+    lockable |= targetData.DistanceSquared < ClosedArea;
+    targetData.Lock = FMath::Clamp(targetData.Lock + (lockable ? -DeltaTime : DeltaTime), 0.0f, 1.0f);
 }
 
 void AGuidedBomb::Explode()

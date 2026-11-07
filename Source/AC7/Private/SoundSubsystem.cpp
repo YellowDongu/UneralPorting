@@ -120,15 +120,11 @@ TWeakObjectPtr<UAudioComponent> USoundSubsystem::GetChannel(const FString& name,
         output->bAutoActivate = false;
     }
 
-    if (!output->IsRegistered())
-    {
-        check(world);
+    if (!output->IsRegistered() || IsValid(output->GetWorld()))
         output->RegisterComponentWithWorld(world);
-    }
 
     return TWeakObjectPtr<UAudioComponent>(output.Get());
 }
-
 
 void FSoundSet::Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound)
 {

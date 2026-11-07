@@ -31,12 +31,12 @@ public:
 	TWeakObjectPtr<class AVehicleBase> Instantiate(UWorld& world, EVehicleID vehicleID);
 	TWeakObjectPtr<class AAIPilot> Instantiate(UWorld* world, const FSpawnInfomation& infomation);
 
-	TWeakObjectPtr<class AFlare> GetFlare(USceneComponent* flarePod);
+	TWeakObjectPtr<class AFlare> GetFlare(AVehicleBase* shooter, USceneComponent* flarePod, float velocity = 0.0f);
 	void Explosion(UWorld* world, const FVector& position, float Size = 50.0f, float lifeTime = 3.0f);
 	TWeakObjectPtr<class ABullet> Instantiate(UWorld& world, const FVector& position, const FRotator& Rotation, float velocity);
 	TObjectPtr<class AMissile> Instantiate(class AMissile* origin);
 
-	void Release(class AVehicleBase* instance);
+	void Release(class AVehicleBase* instance/*, bool isPossessed = false*/);
 	void Release(class AMissile* instance);
 	void Release(class AFlare* instance);
 	void Release(class ABullet* instance);

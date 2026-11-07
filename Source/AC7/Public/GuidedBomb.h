@@ -21,13 +21,15 @@ public:
 
 	virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output) override;
 	//virtual int Shoot(TWeakObjectPtr<class AVehicleBase> owner, FTargetInfo* locked) override;
+	virtual void Lock(FTargetInfo& targetData, float DeltaTime, const FVector& forward, const FVector& position) override;
+	virtual void Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectPtr<class AVehicleBase>& owner) override;
 
 	void Explode();
 	double GetBlastArea(void) { return BlastArea; }
 
 protected:
 	float ElapsedTime{ 0.0f }, LandingTime{ 10.0f };
-	double BlastArea{ 500.0 };
+	double BlastArea{ 500.0 }, ClosedArea{ 0.0 };
 
 	FVector TrackedPosition, StartPosition;
 };

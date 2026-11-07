@@ -247,7 +247,6 @@ void UFireControlSystem::RefreshTarget()
 	Targets.Reset();
 	currentTargets.Reset();
 	const auto& targets = Radar->GetTargets();
-	float weight = Radar->GetRaderDistance() * Radar->GetRaderDistance() * -2.0f;
 	if (targets.IsEmpty()) return;
 
 	FVector forward = GetOwner()->GetActorForwardVector();
@@ -258,13 +257,14 @@ void UFireControlSystem::RefreshTarget()
 		if (!item.IsValid())
 			continue;
 
+		AddTarget(item, forward, position);
 		FVector direction = item->GetActorLocation() - position;
-		float length = direction.SizeSquared();
+		float dot = FVector::DotProduct(direction.GetSafeNormal(), forward);
 
-		if (FVector::DotProduct(direction.GetSafeNormal(), forward) > maxDegree)
-			length += weight;
+		if (dot < maxDegree)
+			dot += direction.SizeSquared();
 		
-		Targets.Add(length, item);
+		Targets.Add(dot, item);
 	}
 
 	int i = 0;
@@ -334,25 +334,20 @@ void UFireControlSystem::ChangeTarget()
 		//SetSelectTargetUI.Broadcast(targetInfo.Target.Get(), true);
 	}
 }
-
-void UFireControlSystem::AddTarget(AVehicleBase* target)
+void UFireControlSystem::AddTarget(AVehicleBase* target) { AddTarget(TWeakObjectPtr<AVehicleBase>(target), GetOwner()->GetActorForwardVector(), GetOwner()->GetActorLocation()); }
+void UFireControlSystem::AddTarget(const TWeakObjectPtr<AVehicleBase>& target, const FVector& forward, const FVector& position)
 {
-	//if (Targets.Contains(Target))
-	//	return;
-
-	FVector forward = GetOwner()->GetActorForwardVector();
-	FVector position = GetOwner()->GetActorLocation();
-
 	FVector direction = target->GetActorLocation() - position;
-	float length = direction.SizeSquared();
 
-	if (FVector::DotProduct(direction.GetSafeNormal(), forward) > maxDegree)
-		length += TNumericLimits<float>::Lowest();
+	float dot = FVector::DotProduct(direction.GetSafeNormal(), forward);
 
-	Targets.Add(length, target);
+	if (dot < maxDegree)
+		dot += direction.SizeSquared();
+
+	Targets.Add(dot, target);
 }
 
-void UFireControlSystem::ReplaceSelectedTarget(AVehicleBase* target)
+void UFireControlSystem::ReplaceSelectedTarget(AVehicleBase* target) // deprecated
 {
 	TSet<AVehicleBase*> checker;
 	int index = -1;
@@ -408,7 +403,6 @@ void UFireControlSystem::ReplaceSelectedTarget(AVehicleBase* target)
 
 	if (!targetIterator)
 		targetIterator.RemoveCurrent();
-
 }
 
 void UFireControlSystem::SetTarget(const TWeakObjectPtr<AVehicleBase>& target)
@@ -483,10 +477,7 @@ void UFireControlSystem::RemoveTarget(AVehicleBase* target)
 
 bool UFireControlSystem::ShootMissile()
 {
-	if (currentTargets.IsEmpty())
-		return false;
-
-	if (currentTargets[0].Lock >= 0.001f)
+	if (currentTargets.IsEmpty() || currentTargets[0].Lock > 0.001f)
 		return false;
 
 	for (auto& item : standard)
@@ -494,7 +485,6 @@ bool UFireControlSystem::ShootMissile()
 		if (item->IsCoolTime())
 			continue;
 
-		UE_LOG(LogTemp, Error, TEXT("[UFireControlSystem::ShootMissile] ShootMissile Called"));
 		item->Shoot(static_cast<AVehicleBase*>(GetOwner()), currentTargets[0].Target.Get());
 		return true;
 	}
@@ -596,8 +586,8 @@ bool UFireControlSystem::ShootMissile(TArray<int>& output)
 	else
 	{
 		int max = standard.Num();
-		TWeakObjectPtr<class AVehicleBase> target{ nullptr };
-		if (!currentTargets.IsEmpty() && currentTargets[0].Lock >= 0.001f)
+		TWeakObjectPtr<AVehicleBase> target{ nullptr };
+		if (!currentTargets.IsEmpty() && currentTargets[0].Lock <= 0.001f)
 			target = currentTargets[0].Target;
 
 		for (int i = 0; i < max; i++)
@@ -619,7 +609,7 @@ bool UFireControlSystem::ShootMissile(TArray<int>& output)
 		return false;
 	}
 }
-
+#include "Bullet.h"
 bool UFireControlSystem::ShootGun()
 {
 	if (bulletTime < GunRPM)
@@ -632,7 +622,8 @@ bool UFireControlSystem::ShootGun()
 	bulletTime = 0.0f;
 	FRotator rotation = GetOwner()->GetActorRotation();
 	//factory->Instantiate(GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 50.0f, GetOwner()->GetActorRotation(), 4500.0f, GetOwner());
-	factory->Instantiate(*world, GetOwner()->GetActorLocation() + rotation.RotateVector(GunPosition * 0.5), rotation, ConvertFromVelocity(Control->Velocity) * 10.0f);
+	auto instance = factory->Instantiate(*world, GetOwner()->GetActorLocation() + rotation.RotateVector(GunPosition * 0.5), rotation, ConvertFromVelocity(Control->Velocity) * 10.0f);
+	UE_LOG(LogTemp, Log, TEXT("[UFireControlSystem::ShootGun] shoot, %s"), *instance->GetName());
 	return true;
 }
 

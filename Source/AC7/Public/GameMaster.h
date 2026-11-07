@@ -47,7 +47,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UI, meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class UBluePrintCollector> CollectorBluePrint;
-	UPROPERTY(VisibleAnywhere) TObjectPtr<class UBluePrintCollector> Collector;
+	UPROPERTY() TObjectPtr<class UBluePrintCollector> Collector;
 
 	TSoftObjectPtr<UWorld> ReservedLevel{ nullptr };
 };

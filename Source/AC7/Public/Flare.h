@@ -35,6 +35,8 @@ private:
 	float LifeTime{ 5.0f }, CurrentLifeTime{0.0f};
 	double MinimumSpeed{50.0f}, ShootSpeed{ 330.0f }, CurrentSpeed;
 
+	FVector CurrentVelocity{ FVector::ZeroVector };
+
 	TWeakObjectPtr<UNiagaraComponent> Body{nullptr};
 	TWeakObjectPtr<UNiagaraComponent> Trail{nullptr};
 	FNiagaraParameterDirectBinding<FVector3f> FlareBodyDirection;
