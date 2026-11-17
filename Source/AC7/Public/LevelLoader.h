@@ -29,10 +29,10 @@ public:
 	static TMap<FString, TSoftObjectPtr<USoundBase>> GetAllSoundAsset(void);
 	static TMap<FString, TSoftObjectPtr<class UMovementPathAsset>> GetAllWaypointAsset(void);
 	
-	const TSharedPtr<FStreamableHandle>* AssetSyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& pathList, bool override, const FStreamableDelegate& delegate);
-	const TSharedPtr<FStreamableHandle>* AssetSyncLoad(const FString& handleName, const FSoftObjectPath& targetPath, bool override = true, const FStreamableDelegate& delegate = FStreamableDelegate()) { return AssetSyncLoad(handleName, TArray<FSoftObjectPath>{ targetPath }, override, delegate); }
-	const TSharedPtr<FStreamableHandle>* AssetAsyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& targetPath, bool override = true, const FStreamableDelegate& delegate = FStreamableDelegate());
-	const TSharedPtr<FStreamableHandle>* AssetAsyncLoad(const FString& handleName, const FSoftObjectPath& targetPath, bool override = true, const FStreamableDelegate& delegate = FStreamableDelegate()) { return AssetAsyncLoad(handleName, TArray<FSoftObjectPath>{ targetPath }, override, delegate); }
+	void AssetSyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& pathList, bool override, const FStreamableDelegate& delegate);
+	void AssetSyncLoad(const FString& handleName, const FSoftObjectPath& targetPath, bool override = true, const FStreamableDelegate& delegate = FStreamableDelegate()) { return AssetSyncLoad(handleName, TArray<FSoftObjectPath>{ targetPath }, override, delegate); }
+	void AssetAsyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& targetPath, bool override = true, const FStreamableDelegate& delegate = FStreamableDelegate());
+	void AssetAsyncLoad(const FString& handleName, const FSoftObjectPath& targetPath, bool override = true, const FStreamableDelegate& delegate = FStreamableDelegate()) { return AssetAsyncLoad(handleName, TArray<FSoftObjectPath>{ targetPath }, override, delegate); }
 
 	inline void ActiveChangeTrigger() { bActiveChangeTrigger = true; }
 	void Unload(const FString& Name) { if (Name.IsEmpty() || !LoadedAssetHandles.Contains(Name)) return; LoadedAssetHandles.Remove(Name); }

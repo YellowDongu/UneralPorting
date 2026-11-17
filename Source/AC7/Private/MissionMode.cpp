@@ -7,6 +7,7 @@
 #include "StageChangeUIUnit.h"
 #include "PlayerPilot.h"
 #include "DebugSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 AMissionMode::AMissionMode()
 {
@@ -17,24 +18,13 @@ void AMissionMode::BeginPlay()
     Super::BeginPlay();
 
     FVector leftBottom{ FVector::ZeroVector }, rightTop{ FVector::OneVector };
-    
-    ULevel* Level = GetWorld()->GetCurrentLevel();
-    
-    for (AActor* actor : Level->Actors)
-    {
-        if (!IsValid(actor))
-            continue;
 
-        if (actor->GetActorNameOrLabel() == TEXT("LBBoarder"))
-            leftBottom = actor->GetActorLocation();
-        else if (actor->GetActorNameOrLabel() == TEXT("RTBoarder"))
-            rightTop = actor->GetActorLocation();
-        //else if (actor->ActorHasTag(TEXT("LBBoarder")))
-        //    leftBottom = actor->GetActorLocation();
-        //else if (actor->ActorHasTag(TEXT("RTBoarder")))
-        //    rightTop = actor->GetActorLocation();
-    }
-    
+    TArray<AActor*> list;
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("LBBoarder"), list);
+    if(!list.IsEmpty()) leftBottom = list[0]->GetActorLocation();
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("RTBoarder"), list);
+    if (!list.IsEmpty()) rightTop = list[0]->GetActorLocation();
+
     UE_LOG(LogTemp, Error, TEXT("[AMissionMode::BeginPlay] LBBoarder : %s, RTBoarder : "), *leftBottom.ToString(), *rightTop.ToString());
     URadarUI::SetBoarder(leftBottom, rightTop);
 }

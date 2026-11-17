@@ -4,9 +4,18 @@
 
 #include "CoreMinimal.h"
 
+#if WITH_EDITOR
+//#include "Editor.h"
+#include "Kismet/KismetSystemLibrary.h"
+#endif
+
 #include "Defined.generated.h"
 
 #define MapEditMode
+#define BlockAISpecial
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FTickEvent, float);
+//DECLARE_DELEGATE_RetVal_OneParam(float, FCalculateThrottle, float);
 
 template<typename Type>
 inline constexpr Type ConvertFromAltitude(Type value) { return value * 5.0; }
@@ -27,6 +36,134 @@ inline double CalibrateAngle(double angle) { return FMath::UnwindDegrees(angle);
 FString ExtractFileName(const FString& FilePath); // 메모용
 FString ExtractFileExtension(const FString& FilePath); // 메모용
 FString ExtractFileFullName(const FString& FilePath); // 메모용
+
+constexpr FLinearColor RedHUD = FLinearColor(1.0f, 0.0f, 0.0f, 0.8f);
+constexpr FLinearColor CyanHUD = FLinearColor(0.0f, 1.0f, 1.0f, 0.8f);
+constexpr FLinearColor GreenHUD = FLinearColor(0.0f, 1.0f, 0.0f, 0.8f);
+constexpr FLinearColor HUDColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.8f);
+constexpr FLinearColor AlartColor = FLinearColor(1.0f, 0.0f, 0.0f, 0.8f);
+constexpr FLinearColor BaseColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.8f);
+
+/*
+void Function(const TCHAR* Format, ...)
+{
+	va_list args;
+	va_start(args, Format);
+
+	TCHAR Buffer[1024];
+	_vstprintf_s(Buffer, 1024, Format, args);
+
+	va_end(args);
+
+}
+
+void Function(bool condition, const TCHAR* Format, ...)
+{
+	va_list args;
+	va_start(args, Format);
+
+	TCHAR Buffer[1024];
+	_vstprintf_s(Buffer, 1024, Format, args);
+
+	va_end(args);
+}
+
+void Function(bool condition, UWorld* world, const TCHAR* Format, ...)
+{
+	va_list args;
+	va_start(args, Format);
+
+	TCHAR Buffer[1024];
+	_vstprintf_s(Buffer, 1024, Format, args);
+
+	va_end(args);
+
+}
+
+void Function(const TCHAR* Message, ...)
+{
+	va_list args;
+	va_start(args, Message);
+
+	int a = va_arg(args, int);
+	float b = va_arg(args, double);
+
+	va_end(args);
+}
+
+#define SELECT_MACRO(_1, _2, _3, _4, NAME, ...) NAME
+
+#define MACRO_1(a) Function1(a)
+#define MACRO_2(a, b) Function2(a, b)
+
+#define MY_MACRO(...) \
+	SELECT_MACRO(__VA_ARGS__, MACRO_2, MACRO_1)(__VA_ARGS__)
+
+//UE_LOG(LogTemp, Fatal, ...) // => 크래시
+#if WITH_EDITOR
+
+#define VariableCheck(var1, var2, var3, NAME, ...) NAME
+
+#define CheckError(Condition, Message, ...) \
+do \
+{ \
+	if (!(Condition)) \
+	{ \
+		ensureMsgf(false, Message, ##__VA_ARGS__); \
+		UKismetSystemLibrary::QuitGame(GetWorld(), nullptr, EQuitPreference::Quit, false);\
+	} \
+} while (0)
+#define CheckErrorWithWorld(Condition, world, Message, ...) \
+do \
+{ \
+	if (!(Condition)) \
+	{ \
+		ensureMsgf(false, Message, ##__VA_ARGS__); \
+		UKismetSystemLibrary::QuitGame(world, nullptr, EQuitPreference::Quit, false);\
+	} \
+} while (0)
+
+#define Check(...)  \
+VariableCheck(__VA_ARGS__, CheckErrorWithWorld, CheckError)(__VA_ARGS__)
+
+//GEditor->RequestEndPlayMap(); => #include "Editor.h"를 쓰는 방법
+// do-while은 if문 매크로 오류 방지
+#else
+#define Check(Condition, Message, ...) do { if (!(Condition)) { UKismetSystemLibrary::QuitGame(GetWorld(), nullptr, EQuitPreference::Quit, false); } } while (0)
+#endif
+
+ 
+ 
+ 
+#if WITH_EDITOR
+
+#define Check(Condition, Message, ...) \
+do \
+{ \
+    if (!(Condition) && GEditor && GEditor->PlayWorld) \
+    { \
+        if constexpr (sizeof(#__VA_ARGS__) > 1) \
+            ensureMsgf(false, Message, __VA_ARGS__); \
+        else \
+            ensureMsgf(false, Message); \
+        GEditor->RequestEndPlayMap(); \
+    } \
+} while (0)#define Check1(Condition, Message) \
+do { \
+    if (!(Condition) && GEditor && GEditor->PlayWorld) { \
+        ensureMsgf(false, Message); \
+        GEditor->RequestEndPlayMap(); \
+    } \
+} while (0)
+
+#define Check2(Condition, Message, ...) \
+do { \
+    if (!(Condition) && GEditor && GEditor->PlayWorld) { \
+        ensureMsgf(false, Message, __VA_ARGS__); \
+        GEditor->RequestEndPlayMap(); \
+    } \
+} while (0)
+*/
 
 struct FTargetInfo
 {
@@ -137,7 +274,9 @@ USTRUCT(BlueprintType)
 struct FWeaponMask
 {
 	GENERATED_BODY()
-
+	friend class AVehicleBase;
+	friend class AAircraft;
+	friend class AGroundVehicle;
 	const inline void Initialize()
 	{
 		if (mask == -1)
@@ -182,14 +321,10 @@ public:
 
 	float GetHighGTurn(float deltaTime)
 	{
-		if (bIsActiveHighG != bActiveHighGTurn)
-		{
-			bIsActiveHighG = bActiveHighGTurn;
-			HighGTurn = bIsActiveHighG ? 5.0f : 1.0f;
-		}
+		HighGTime = FMath::Clamp(bActiveHighGTurn ? HighGTime -deltaTime : HighGTime + HighGDuration * deltaTime, 1.0f, HighGDuration);
+		HighGTurn = FMath::Lerp(1.0f, HighGBunus, HighGTime / HighGDuration);
 
-		HighGTurn = FMath::Max(HighGTurn - deltaTime * 2.0f, 1.0f);
-		return HighGTurn;
+		return bActiveHighGTurn ? HighGTurn : 1.0f;
 	}
 
 	//DECLARE_DELEGATE_OneParam(FCalculateThrottle, float);
@@ -198,7 +333,11 @@ public:
 
 private:
 	bool bIsActiveHighG{ false };
-	float HighGTurn{ 1.0f };
+	float HighGTurn{ 1.0f }, HighGTime{ HighGDuration };
+
+	static constexpr float HighGDuration{ 3.0f };
+	//static constexpr float HighGRecoverDuration{ 2.0f };
+	static constexpr float HighGBunus{ 2.5f };
 };
 
 USTRUCT(BlueprintType)
@@ -206,7 +345,7 @@ struct FPlayerSpawnInfomation
 {
 	GENERATED_BODY()
 public:
-	int SpecialWeaponIndex{ -1 };
+	EWeaponID SpecialWeapon{ EWeaponID::END };
 	EVehicleID VehicleID{ EVehicleID::F15E };
 };
 
@@ -273,6 +412,7 @@ public:
 	void ChangeIndex(int index);
 	void ChangeChildsText(TFunction<void(TArray<TObjectPtr<class UTextBlock>>& TextBlockList, int& MaxChildCount)> childTextChangeFunction);
 
+	bool IsValidIndex(int index) { return TextBlockList.IsValidIndex(index); }
 	int GetMaxIndex() { return MaxIndex; }
 	int GetCurrentIndex() { return Index; }
 	void SetActive(bool active) { bActive = active; }
@@ -320,11 +460,59 @@ struct FWaypointData
 	GENERATED_BODY()
 public:
 	FWaypointData() = default;
-	FWaypointData(FVector position, FQuat rotation, double distanceValue) : Position(position), Rotation(rotation), DistanceValue(distanceValue) {}
+	FWaypointData(const FVector& position, const FQuat& rotation, double distanceValue) : Position(position), Rotation(rotation), DistanceValue(distanceValue) {}
 	~FWaypointData() = default;
 
 	UPROPERTY(EditAnywhere) FVector Position { FVector::ZeroVector };
 	UPROPERTY(EditAnywhere) FQuat Rotation { FQuat::Identity };
 	UPROPERTY(EditAnywhere) double DistanceValue{ 0.0 }; // 이전 점과의 거리, 없으면 0
 	//UPROPERTY(EditAnywhere) bool bAutoRotation = false;   // 쓰기로 하면
+};
+
+
+void CheatDeleteEnemy(UWorld* world);
+
+
+
+struct SequenceTask
+{
+	DECLARE_DELEGATE_RetVal_OneParam(bool, FSequenceFunction, float);
+
+	
+	void Update(float DeltaTime)
+	{
+		if (!SequenceList.IsValidIndex(currentIndex))
+			return;
+
+		if (!SequenceList[currentIndex].IsBound())
+		{
+			SequenceList.RemoveAt(currentIndex);
+			AccumulateTime = 0.0f;
+			if (!SequenceList.IsValidIndex(currentIndex))
+				return;
+		}
+
+		AccumulateTime += DeltaTime;
+		//if (SequenceList[currentIndex].ExecuteIfBound<float>(AccumulateTime))
+		if (SequenceList[currentIndex].Execute(AccumulateTime))
+		{
+			AccumulateTime = 0.0f;
+			currentIndex++;
+		}
+		
+	}
+	void AddSequence(FSequenceFunction delegate) { SequenceList.Add(MoveTemp(delegate)); }
+	void InsertSequence(FSequenceFunction delegate, int index, bool overrideMode = false)
+	{
+		if (!SequenceList.IsValidIndex(index))
+			SequenceList.SetNum(index + 1);
+		else if (!overrideMode && SequenceList[index].IsBound())
+				return;
+		
+		SequenceList[index] = MoveTemp(delegate);
+	}
+
+	int currentIndex{ 0 };
+	float AccumulateTime{ 0.0f };
+	TArray<FSequenceFunction> SequenceList;
 };

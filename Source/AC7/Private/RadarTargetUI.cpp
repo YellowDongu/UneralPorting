@@ -51,34 +51,30 @@ void URadarTargetUI::Attach(UCanvasPanel* Canvas)
 
 void URadarTargetUI::ChangeImage(AVehicleBase* target)
 {
-	static const FLinearColor RedHUD = FLinearColor(1.0f, 0.0f, 0.0f, 0.8f);
-	static const FLinearColor CyanHUD = FLinearColor(0.0f, 1.0f, 1.0f, 0.8f);
-	static const FLinearColor GreenHUD = FLinearColor(0.0f, 1.0f, 0.0f, 0.8f);
-
-	auto& mask = target->GetMask();
+	const FWeaponMask& mask = target->GetMask();
 	int teamMask = target->GetTeam();
 
-	if (Mask != mask.GetMask())
+	if (TeamMask == teamMask && Mask == mask.GetMask())
+		return;
+
+	Current->SetVisibility(ESlateVisibility::Hidden);
+	TeamMask = teamMask;
+	Mask = mask.GetMask();
+
+	if (TeamMask == 1)
 	{
-		Current->SetVisibility(ESlateVisibility::Hidden);
+		Current = mask.IsAir() ? Air : Ground;
 
-		if (mask.IsAir())
-			Current = target->IsTGT() ? AirTGT : Air;
-		else
-			Current = target->IsTGT() ? GroundTGT : Ground;
-
-		Mask = mask.GetMask();
 		Current->SetVisibility(ESlateVisibility::Visible);
-
-		TeamMask = teamMask;
-		Current->SetColorAndOpacity(TeamMask == 1 ? CyanHUD : (target->IsTGT() ? RedHUD : GreenHUD));
+		Current->SetColorAndOpacity(CyanHUD);
 	}
-	else if (teamMask != TeamMask)
+	else
 	{
-		TeamMask = teamMask;
-		Current->SetColorAndOpacity(TeamMask == 1 ? CyanHUD : (target->IsTGT() ? RedHUD : GreenHUD));
+		Current = mask.IsAir() ? ((TeamMask != 1 && target->IsTGT()) ? AirTGT : Air) : ((TeamMask != 1 && target->IsTGT()) ? GroundTGT : Ground);
+
+		Current->SetVisibility(ESlateVisibility::Visible);
+		Current->SetColorAndOpacity(target->IsTGT() ? RedHUD : GreenHUD);
 	}
 }
 
-inline void URadarTargetUI::SetColor(const FLinearColor& NewColor) { Current->SetColorAndOpacity(NewColor); }
 

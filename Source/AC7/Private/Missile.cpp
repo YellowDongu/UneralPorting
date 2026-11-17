@@ -25,9 +25,6 @@ bool AMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<cl
 
 void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<AVehicleBase> locked)
 {
-    if (Trail == nullptr)
-        Trail = FindComponentByClass<UNiagaraComponent>();
-
     GiveRadarWarn.Unbind();
     SetActorEnableCollision(true);
     SetActorHiddenInGame(false);
@@ -39,7 +36,8 @@ void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> o
     bIsProjectile = true;
     FlyDistance = MaxRange * 1.5f;
     //Trail->ReinitializeSystem();
-    Trail->Activate();
+    if (IsValid(Trail))
+        Trail->Activate();
 
     Target = locked;
     if (!IsAlive(Target))
@@ -163,7 +161,8 @@ void AMissile::RetriveObject()
     UObjectFactory* objectFactory = GetWorld()->GetSubsystem<UObjectFactory>();
     if (objectFactory != nullptr)
     {
-        Trail->Deactivate();
+        if (IsValid(Trail))
+            Trail->Deactivate();
         SetActorEnableCollision(false);
         SetActorHiddenInGame(true);
         SetActorTickEnabled(false);

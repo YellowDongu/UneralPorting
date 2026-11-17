@@ -40,12 +40,6 @@ private:
 	float CloseRangeSize{ ConvertFromDistance(5000.0f) };
 	TArray<TObjectPtr<URadarTargetUI>> Alive, Stored;
 
-	UPROPERTY() TObjectPtr<USoundBase> WarnSound{ nullptr };
-	TWeakObjectPtr<UAudioComponent> WarnSoundChannel{ nullptr };
-	bool bSoundState{ false };
-	float SoundTimer{ 0.0f }, SoundDuration{ 0.5f }, AlartSoundDuration{ 0.25f };
-
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<URadarTargetUI> TargetBluePrint;
 

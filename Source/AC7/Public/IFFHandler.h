@@ -29,7 +29,7 @@ public:
 	//void RemoveTarget(class AVehicleBase* Target);
 	void SelectTarget(class AVehicleBase* target, bool isSelected);
 
-
+	void SetColor(FLinearColor NewColor) { CurrentColor = NewColor;/*변하게 할 지 말지 고민중*/ }
 
 private:
 	TWeakObjectPtr<class AAircraft> Player{ nullptr };
@@ -45,6 +45,7 @@ private:
 	UPROPERTY(EditAnywhere, meta = (BindWidget, Category = "UI", AllowPrivateAccess = "true"))
 	class UCanvasPanel* BaseCanvas{ nullptr };
 
+	FLinearColor CurrentColor;
 
 	FDelegateHandle AddHandle;
 	FDelegateHandle RemoveHandle;

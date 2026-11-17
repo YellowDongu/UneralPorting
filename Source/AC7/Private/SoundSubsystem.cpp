@@ -66,10 +66,9 @@ void USoundSubsystem::AsyncLoadSound(const TArray<FString>& nameList)
         pathMap.Add(pointer->ToSoftObjectPath(), name);
     }
 
-    UAssetManager::GetStreamableManager().RequestAsyncLoad(pathList, [pathMap, WeakThis = TWeakObjectPtr<USoundSubsystem>(this)]()
+    UAssetManager::GetStreamableManager().RequestAsyncLoad(pathList, [pathMap, SoundSubsystem = TWeakObjectPtr<USoundSubsystem>(this)]()
                                                            {
-                                                               USoundSubsystem* self = WeakThis.Get();
-                                                               if (self == nullptr)
+                                                               if (!SoundSubsystem.IsValid())
                                                                    return;
 
                                                                for (const auto& item : pathMap)
@@ -79,7 +78,7 @@ void USoundSubsystem::AsyncLoadSound(const TArray<FString>& nameList)
                                                                    if (Sound == nullptr)
                                                                        continue;
 
-                                                                   TObjectPtr<USoundBase>* result = self->Sounds.Find(item.Value);
+                                                                   TObjectPtr<USoundBase>* result = SoundSubsystem->Sounds.Find(item.Value);
                                                                    *result = Sound;
                                                                }
                                                            });
@@ -95,6 +94,22 @@ bool USoundSubsystem::PlaySound(const FString& name, TObjectPtr<USoundBase>* out
         *output = sound;
 
     auto channel = UGameplayStatics::SpawnSound2D(this, sound, 1.0f, 1.0f, 0.0f, nullptr, false, false);
+    if (outputChannel != nullptr)
+        *outputChannel = channel;
+
+    return true;
+}
+
+bool USoundSubsystem::PlaySound(const FString& name, const FVector& position, TObjectPtr<USoundBase>* output, TWeakObjectPtr<UAudioComponent>* outputChannel)
+{
+    TObjectPtr<USoundBase> sound = GetSound(name);
+    if (sound == nullptr)
+        return false;
+
+    if (output != nullptr)
+        *output = sound;
+
+    auto channel = UGameplayStatics::SpawnSoundAtLocation(this, sound, position, UE::Math::TRotator<double>::ZeroRotator, 1.0f, 1.0f, 0.0f, nullptr, nullptr, outputChannel != nullptr);
     if (outputChannel != nullptr)
         *outputChannel = channel;
 
@@ -126,10 +141,27 @@ TWeakObjectPtr<UAudioComponent> USoundSubsystem::GetChannel(const FString& name,
     return TWeakObjectPtr<UAudioComponent>(output.Get());
 }
 
+void FSoundSet::Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound, UWorld* world)
+{
+    if (!IsValid(world))
+        return;
+
+    Channel = sound->GetChannel(channelName, world);
+
+    if (!Channel->IsRegistered())
+        Channel->RegisterComponentWithWorld(world);
+
+    ChangeSound(sound->GetSound(soundName));
+}
+
 void FSoundSet::Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound)
 {
     Channel = sound->GetChannel(channelName, sound->GetWorld());
-    Sound = sound->GetSound(soundName);
+
+    if (!Channel->IsRegistered())
+        Channel->RegisterComponentWithWorld(sound->GetWorld());
+
+    ChangeSound(sound->GetSound(soundName));
 }
 
 void FSoundSet::BlinkSound(float maxTime, float deltaTime)
@@ -148,6 +180,16 @@ void FSoundSet::BlinkSound(float maxTime, float deltaTime)
         Channel->Stop();
     else
         Channel->Play();
+}
+
+void FSoundSet::ChangeSound(const TObjectPtr<USoundBase>& other)
+{
+    if (!IsValid(other))
+        return;
+
+    Sound = other;
+    Channel->SetSound(Sound);
+    Timer = TNumericLimits<float>::Max();
 }
 
 void FSoundSet::Stop(void) { if (!Channel->IsPlaying()) return; bIsPlaying = false; Channel->Stop(); }

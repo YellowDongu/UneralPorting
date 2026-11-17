@@ -35,7 +35,7 @@ public:
 	UAircraftAnimator(); // 원랜 void 키워드를 컴파일러가 끼워넣는 작업을 알아서 해서 넣어도 되고 안넣어도 되는건데 언리얼 자체적인 해석에서 이 녀석을 문자 그대로 읽는 방법을 써서 void 키워드를 쓰면 안되는듯?
 
 	virtual void SystemIntegration(struct FControl* control);
-	virtual void Update(float deltaTime);
+	virtual void Update(float DeltaTime) { FUpdate.Broadcast(DeltaTime); }
 
 	void ReadComponent(void);
 	void StaticGearActive(bool value);
@@ -47,7 +47,6 @@ public:
 	bool IsGearActive(void) const { return bGearActive; }
 
 private:
-	void MoveGear(void);
 	void CalculatePosition(void);
 
 protected:
@@ -55,7 +54,9 @@ protected:
 	float animationSpeed{ 10.0f };
 	struct FControl* Control{ nullptr };
 
+	FTickEvent FUpdate;
 	FTimerHandle GearTimerHandle;
+	FDelegateHandle GearUpdate;
 	FVector CenterFloor, BodyCenter, GearCenter;
 	FBoxSphereBounds MeshBoundary;
 

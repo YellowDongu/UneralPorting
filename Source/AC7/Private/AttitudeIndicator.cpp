@@ -11,7 +11,7 @@ void UAttitudeIndicator::NativeTick(const FGeometry& MyGeometry, float DeltaTime
 
 	float pitch = GetEularAngle.Execute().Euler().Y / PitchSpace;
 	int pitchRate = static_cast<int>(pitch);
-	float nextSpace = (pitchRate - pitch) * space;
+	float nextSpace = (pitchRate - pitch) * Space;
 	int index = HalfHeight;
 
 	if (Pitch != pitchRate)
@@ -36,7 +36,7 @@ void UAttitudeIndicator::NativeTick(const FGeometry& MyGeometry, float DeltaTime
 
 	//UE_LOG(LogClass, Warning, TEXT("%2f, %d, %d"), nextSpace, index, Alive.Num());
 	for (auto& item : Alive)
-		item.Key->SetPosition(FVector2D(0.0f, static_cast<float>(index--) * space + nextSpace));
+		item.Key->SetPosition(FVector2D(0.0f, static_cast<float>(index--) * Space + nextSpace));
 }
 
 TObjectPtr<UPitchBar> UAttitudeIndicator::AddPitchBar(int pitchLevel, bool back)
@@ -79,37 +79,37 @@ void UAttitudeIndicator::NativePreConstruct()
 	Pitch = 0;
 
 	int number = -HalfHeight;
-	space = -MaxHeight / static_cast<float>(HalfHeight);
+	Space = -MaxHeight / static_cast<float>(HalfHeight);
 	TObjectPtr<UPitchBar> newInstance{ nullptr };
 
 	newInstance = AddPitchBar(-number);
 	if (newInstance == nullptr) return;
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 	newInstance = AddPitchBar(-number);
 	if (newInstance == nullptr) return;
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 
 	newInstance = AddPitchBar(-number);
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 	newInstance = AddPitchBar(-number);
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 
 	newInstance = AddPitchBar(-number);
 	if (newInstance == nullptr) return;
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 	//UE_LOG(LogClass, Warning, TEXT("%2f"), static_cast<float>(number - 1) * space);
 
 	newInstance = AddPitchBar(-number);
 	if (newInstance == nullptr) return;
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 	newInstance = AddPitchBar(-number);
 	if (newInstance == nullptr) return;
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 
 	newInstance = AddPitchBar(-number);
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 	newInstance = AddPitchBar(-number);
-	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number) * space));
+	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number) * Space));
 
 	bInitialized = true;
 }
@@ -134,6 +134,8 @@ void UAttitudeIndicator::BindPlayer(class AAircraft* vehicle, class APlayerPilot
 		RemoveFromParent();
 		return;
 	}
+
+	currentColor = BaseColor;
 
 	GetEularAngle.BindUObject(vehicle, &AAircraft::GetActorRotation);
 	bBinded = true;

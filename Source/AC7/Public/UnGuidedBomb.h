@@ -31,6 +31,7 @@ public:
 	void Explode();
 
 	double GetBlastArea(void) { return BlastArea; }
+	void SetBombIndicatorHUD(const TWeakObjectPtr<AActor>& actor){ BombIndicatorHUD = actor; }
 
 protected:
 	bool bLanded{ false };
@@ -39,4 +40,5 @@ protected:
 
 	FVector StartPosition, InitialVelocity;
 	FVector PreviousLocation;
+	TWeakObjectPtr<AActor> BombIndicatorHUD{ nullptr };
 };

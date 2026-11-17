@@ -2,9 +2,10 @@
 
 
 #include "PlayerPilot.h"
+
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-
+#include "Components/AudioComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Camera/CameraShakeBase.h"
 //#include "../Plugins/Cameras/GameplayCameras/Source/GameplayCameras/Public/WaveOscillatorCameraShakePattern.h"
@@ -19,6 +20,7 @@
 #include "RadarUI.h"
 #include "SoundSubsystem.h"
 #include "ObjectFactory.h"
+#include "Missile.h"
 
 
 APlayerPilot::APlayerPilot()
@@ -37,10 +39,28 @@ void APlayerPilot::BeginPlay(void)
 
     USoundSubsystem* soundSubsystem = GetGameInstance()->GetSubsystem<USoundSubsystem>();
     ShootSound = soundSubsystem->GetSound(TEXT("MissileFired"));
-    SpecialShootSound = soundSubsystem->GetSound(TEXT("MissileFired2"));
+
+    bool bombSound = false;
+    auto specialWeapon = Aircraft->GetFireControlSystem()->GetMissile(true);
+
+    if (specialWeapon.IsValid())
+    {
+        EWeaponID id = specialWeapon->GetWeaponID();
+        bombSound |= id == EWeaponID::UGB;
+        bombSound |= id == EWeaponID::LGB;
+    }
+
+    SpecialShootSound = soundSubsystem->GetSound(bombSound ? TEXT("BD_00035") : TEXT("MissileFired2"));
     GunSoundSet = MakeShared<FSoundSet>();
     GunSoundSet->Initialize(TEXT("Valcan20mm"), TEXT("GunChannel"), soundSubsystem);
     StaticCast<USoundWave*>(GunSoundSet->Sound)->bLooping = true;
+
+    EngineSoundSet = MakeShared<FSoundSet>();
+    EngineSoundSet->Channel = Aircraft->FindComponentByClass<UAudioComponent>();
+    EngineSoundSet->ChangeSound(soundSubsystem->GetSound(TEXT("Engine_Outside")));
+    StaticCast<USoundWave*>(EngineSoundSet->Sound)->bLooping = true;
+    EngineSoundSet->FloatValue = 1.0f;
+    EngineSoundSet->Play();
 }
 
 void APlayerPilot::SetupInputComponent(void)
@@ -191,8 +211,15 @@ void APlayerPilot::Tick(float DeltaTime)
     bool w = Super::IsInputKeyDown(EKeys::W);
     bool s = Super::IsInputKeyDown(EKeys::S);
 
-    static constexpr float MinValue = 1.0f;
-    static constexpr float MaxValue = 2.5f;
+    //static constexpr float MinValue = 1.0f;
+    //static constexpr float MaxValue = 2.5f;
+
+    float nextPitch = (Control->Throttle + 0.8f)/* * 1.1f*/;
+    if (FMath::Abs(nextPitch - EngineSoundSet->FloatValue) > 0.01f)
+    {
+        EngineSoundSet->FloatValue = FMath::FInterpTo(EngineSoundSet->FloatValue, nextPitch, DeltaTime, 1.0f);
+        EngineSoundSet->Channel->SetPitchMultiplier(EngineSoundSet->FloatValue);
+    }
 
     if (w)
     {
@@ -236,15 +263,17 @@ void APlayerPilot::Tick(float DeltaTime)
     if (bShootGun)
         Aircraft->GetFireControlSystem()->ShootGun();
 
-    if (TestModuleUpdate())
-        return;
-
-    if (Super::IsInputKeyDown(EKeys::F4))
-        StartTest(this, Aircraft.Get());
+    //if (TestModuleUpdate())
+    //    return;
+    //
+    //if (Super::IsInputKeyDown(EKeys::F4))
+    //    StartTest(this, Aircraft.Get());
 
     //if (Super::WasInputKeyJustPressed(EKeys::R))
     //    attachedAircraft->DeployGear();
-    CheatEndMission();
+    if (Super::WasInputKeyJustPressed(EKeys::P))
+        CheatDeleteEnemy(GetWorld());
+
     if (Super::WasInputKeyJustPressed(EKeys::O))
         CameraExplosionShake(1.0f, 0.4f, 2.0f);
     ThirdCameraArm->AddLocalRotation(FRotator(PitchCamRotate * CamRotateSpeed, YawCamRotate * CamRotateSpeed, 0.0f));
@@ -305,39 +334,6 @@ void APlayerPilot::Tick(float DeltaTime)
     //if (attachedAircraft->GetFireControlSystem()->ShootGun())
     //    FiredMissile.Execute(Container, attachedAircraft->GetSelectSpecial());
 #endif
-}
-
-void APlayerPilot::CheatEndMission()
-{
-    if (!Super::WasInputKeyJustPressed(EKeys::P))
-        return;
-
-	UWorld* world = GetWorld();
-    if (world == nullptr)
-        return;
-
-    UObjectFactory* objectFactory = world->GetSubsystem<UObjectFactory>();
-    if (objectFactory == nullptr)
-        return;
-
-    TSet<TWeakObjectPtr<class AVehicleBase>> listSet = objectFactory->GetAllVehicle()[2];
-    for (auto& item : listSet)
-    {
-        static constexpr unsigned int intmax = static_cast<unsigned int>(-1) / 2;
-        item->HPDamage(TNumericLimits<int>::Max());
-        if(item->IsAlive())
-            item->HPDamage(TNumericLimits<int>::Max());
-    }
-
-    listSet = objectFactory->GetAllVehicle()[0];
-    for (auto& item : listSet)
-    {
-        static constexpr unsigned int intmax = static_cast<unsigned int>(-1) / 2;
-        item->HPDamage(TNumericLimits<int>::Max());
-        if (item->IsAlive())
-            item->HPDamage(TNumericLimits<int>::Max());
-    }
-
 }
 
 void APlayerPilot::Attach(AAircraft* aircraft)

@@ -18,11 +18,12 @@ public:
 	UFUNCTION()
 	void OnTriggerHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
-	void Initialize();
-	void Disappear();
-	void Release();
-	void Shoot(const FVector& position, const FRotator& Rotation, float velocity);
+	void Initialize(void);
+	void Disappear(void);
+	void Release(void);
+	void Shoot(const FVector& position, const FRotator& Rotation, float velocity, int Damage = 10);
 protected:
+	int Damage{ 0 };
 	float LifeTime{ 5.0f }, CurrentLifeTime{ 0.0f };
 	double MinimumSpeed{ 50.0 }, ShootSpeed{ 330.0 }, CurrentSpeed{ 0.0 };
 

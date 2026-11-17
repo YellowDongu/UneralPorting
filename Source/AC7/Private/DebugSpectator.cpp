@@ -22,12 +22,12 @@ ADebugSpectator::ADebugSpectator()
     ThirdCameraArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("ThirdCameraArm"));
 }
 
-void ADebugSpectator::PostInitProperties()
+void ADebugSpectator::PostInitProperties(void)
 {
 	Super::PostInitProperties();
 }
 
-void ADebugSpectator::PostInitializeComponents()
+void ADebugSpectator::PostInitializeComponents(void)
 {
 	Super::PostInitializeComponents();
 }
@@ -48,8 +48,60 @@ void ADebugSpectator::SetupPlayerInputComponent(UInputComponent* PlayerInputComp
     //    );
     //}
 }
+#include "SoundSubsystem.h"
+#include "DebugSettings.h"
+static int phase = -1;
+static void TestSound(UWorld* world, float deltaTime)
+{
+    static TSharedPtr<FSoundSet> sound = nullptr;
+    static const FString soundName = TEXT("MissileWarn");
+    static const FString channelName = TEXT("MissileWarnChannel");
+    static float time = 0.0f;
 
-void ADebugSpectator::BeginPlay()
+    static float shortDuration = 0.0f;
+    static float longDuration = 0.0f;
+
+    switch (phase)
+    {
+    case 0:
+    {
+        if (sound == nullptr)
+            sound = MakeShared<FSoundSet>();
+        time = 10.0f;
+        sound->Initialize(soundName, channelName, world->GetGameInstance()->GetSubsystem<USoundSubsystem>(), world);
+
+        const UDebugSettings* debugSetting = GetDefault<UDebugSettings>();
+
+        shortDuration = sound->Sound->Duration * debugSetting->shortDuration;
+        longDuration = sound->Sound->Duration * debugSetting->longDuration;
+
+        if (sound->Channel.IsValid() && IsValid(sound->Sound))
+            phase++;
+        break;
+    }
+    case 1:
+        sound->BlinkSound(longDuration, deltaTime);
+        time -= deltaTime;
+        if (time <= 5.0f)
+            phase++;
+        break;
+    case 2:
+        sound->BlinkSound(shortDuration, deltaTime);
+        time -= deltaTime;
+        if (time <= 0.0f)
+            phase++;
+        break;
+    case 3:
+        sound.Reset();
+        phase = -1;
+        break;
+    default:
+        return;
+    }
+    UE_LOG(LogTemp, Log, TEXT("[::TestSound] time = %.3f"), time);
+}
+
+void ADebugSpectator::BeginPlay(void)
 {
 	Super::BeginPlay();
 
@@ -64,9 +116,21 @@ void ADebugSpectator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-
+    GEngine->AddOnScreenDebugMessage(0, 0.f, FColor::Red, FString::Printf(TEXT("Spectating : %s"), AttachedActor.IsValid() ? *AttachedActor->GetActorLabel() : TEXT("None")));
     APlayerController* controller = Cast<APlayerController>(GetController());
 
+    if (controller->IsInputKeyDown(EKeys::V) && phase == -1)
+        phase++;
+    //TestSound(GetWorld(), DeltaTime);
+
+    if (controller->WasInputKeyJustPressed(EKeys::P))
+        CheatDeleteEnemy(GetWorld());
+
+    if (controller->WasInputKeyJustPressed(EKeys::P))
+        CheatDeleteEnemy(GetWorld());
+
+    MoveSpeed += (static_cast<double>(controller->IsInputKeyDown(EKeys::MouseScrollUp)) - static_cast<double>(controller->IsInputKeyDown(EKeys::MouseScrollDown))) * MoveSpeed * 0.5 * DeltaTime;
+    
     double left = static_cast<double>(controller->IsInputKeyDown(EKeys::Left) || controller->IsInputKeyDown(EKeys::D));
     double right = static_cast<double>(controller->IsInputKeyDown(EKeys::Right) || controller->IsInputKeyDown(EKeys::A));
     double up = static_cast<double>(controller->IsInputKeyDown(EKeys::W) || controller->IsInputKeyDown(EKeys::Up));
@@ -86,6 +150,11 @@ void ADebugSpectator::Tick(float DeltaTime)
 
         SetActorLocation(AttachedActor->GetActorLocation() + ArmRotator.RotateVector(GetActorForwardVector() * -150.0f));
         SetActorRotation(AttachedActor->GetActorRotation());
+        if (controller->IsInputKeyDown(EKeys::Z))
+        {
+            AttachedActor.Reset();
+            return;
+        }
     }
     //else
         //SetActorLocation(GetActorLocation() + (GetActorForwardVector() * Input1.X + GetActorRightVector() * Input1.Y + GetActorUpVector() * Input1.Z * MoveSpeed * DeltaTime));

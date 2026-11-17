@@ -53,9 +53,8 @@ void UAircraftAnimator::SystemIntegration(FControl* control)
 	Animation = Cast<UAircraftAnimation>(BodyMesh->GetAnimInstance());
 	if (Animation == nullptr)
 	{
-		PrimaryComponentTick.bStartWithTickEnabled = false;
-		PrimaryComponentTick.SetTickFunctionEnable(false);
 		UE_LOG(LogTemp, Error, TEXT("[UAircraftAnimator::SystemIntegration] No Skeletal Body Animation"));
+		DestroyComponent();
 		return;
 	}
 
@@ -74,6 +73,29 @@ void UAircraftAnimator::SystemIntegration(FControl* control)
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	PrimaryComponentTick.SetTickFunctionEnable(true);
 	bAutoActivate = true;
+
+	FUpdate.AddWeakLambda(this, [this](float DeltaTime) -> void // basic
+						  {
+							  //UE_LOG(LogTemp, Log, TEXT("Tick %3f : %3f : %3f"), Aileron.GetFrameTime(), Rudder.GetFrameTime(), Elevator.GetFrameTime());
+							  //Aileron.FrameTime = FMath::Clamp(Aileron.FrameTime + ((1.0f + Control->Yoke.X) * 0.5f - Aileron.FrameTime) * DeltaTime * animationSpeed, 0.0f, 1.0f);
+							  //Rudder.FrameTime = FMath::Clamp(Rudder.FrameTime + ((1.0f + Control->Yoke.Z) * 0.5f - Rudder.FrameTime) * DeltaTime * animationSpeed, 0.0f, 1.0f);
+							  //Elevator.FrameTime = FMath::Clamp(Elevator.FrameTime + ((1.0f + Control->Yoke.Y) * 0.5f - Elevator.FrameTime) * DeltaTime * animationSpeed, 0.0f, 1.0f);
+							  Aileron.PlayFrameTime(DeltaTime, (1.0f + Control->Yoke.X) * 0.5f);
+							  Rudder.PlayFrameTime(DeltaTime, (1.0f - Control->Yoke.Y) * 0.5f);
+							  Elevator.PlayFrameTime(DeltaTime, (1.0f + Control->Yoke.Z) * 0.5f);
+
+							  Aileron.Update();
+							  Rudder.Update();
+							  Elevator.Update();
+						  });
+
+	FUpdate.AddWeakLambda(this, [this](float DeltaTime) -> void // 만약 속도 기반 가변 파츠가 있다면 추가
+						  {
+							  static constexpr float preMach = 600.0f; // 661kn
+							  bool HighSpeed = Control->Velocity > preMach;
+							  SPVP.PlayFrameTime(DeltaTime, HighSpeed ? 1.0f : 0.0f);
+							  SPVP.Update();
+						  });
 }
 
 void UAircraftAnimator::ReadComponent()
@@ -82,7 +104,12 @@ void UAircraftAnimator::ReadComponent()
 		return;
 
 	auto list = GetOwner()->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), TEXT("Body"));
-	if (list.IsEmpty()) return;
+	if (list.IsEmpty())
+	{
+		DestroyComponent();
+		return;
+	}
+
 	BodyMesh = Cast<USkeletalMeshComponent>(list[0]);
 
 	list = GetOwner()->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), TEXT("Gear"));
@@ -134,26 +161,33 @@ void UAircraftAnimator::StaticGearActive(bool value)
 
 void UAircraftAnimator::DeployGear(bool value, bool instantSet)
 {
-	if (bNoGear)
-		StaticGearActive(value);
+	if (bGearActive == value)
+		return;
 
 	bGearActive = value;
+
+	if (bNoGear)
+	{
+		StaticGearActive(value);
+		return;
+	}
+
 	if (instantSet)
 	{
-		Gear.SetFrameTime(bGearActive ? 0.0f : 1.0f);
+		Gear.SetFrameTime(bGearActive ? 1.0f : 0.0f);
 		Gear.Update();
 		return;
 	}
 
-	if (!GearTimerHandle.IsValid())
-		GetWorld()->GetTimerManager().SetTimer(GearTimerHandle, this, &UAircraftAnimator::MoveGear, 1.0f / 60.0f, true);
-}
+	if (GearUpdate.IsValid())
+		return;
 
-void UAircraftAnimator::MoveGear()
-{
-	if (Gear.PlayFrameTime(GetWorld()->GetDeltaSeconds(), bGearActive ? 0.0f : 1.0f))
-		GetWorld()->GetTimerManager().ClearTimer(GearTimerHandle);
-	Gear.Update();
+	GearUpdate = FUpdate.AddWeakLambda(this, [this](float DeltaTime) -> void
+						  {
+										   if (Gear.PlayFrameTime(DeltaTime, bGearActive ? 1.0f : 0.0f))
+											   FUpdate.Remove(GearUpdate);
+										   Gear.Update();
+						  });
 }
 
 void UAircraftAnimator::CalculatePosition()
@@ -174,22 +208,3 @@ void UAircraftAnimator::CalculatePosition()
 	CenterFloor.Z = zMin;
 }
 
-void UAircraftAnimator::Update(float DeltaTime)
-{
-	//UE_LOG(LogTemp, Log, TEXT("Tick %3f : %3f : %3f"), Aileron.GetFrameTime(), Rudder.GetFrameTime(), Elevator.GetFrameTime());
-	//Aileron.FrameTime = FMath::Clamp(Aileron.FrameTime + ((1.0f + Control->Yoke.X) * 0.5f - Aileron.FrameTime) * DeltaTime * animationSpeed, 0.0f, 1.0f);
-	//Rudder.FrameTime = FMath::Clamp(Rudder.FrameTime + ((1.0f + Control->Yoke.Z) * 0.5f - Rudder.FrameTime) * DeltaTime * animationSpeed, 0.0f, 1.0f);
-	//Elevator.FrameTime = FMath::Clamp(Elevator.FrameTime + ((1.0f + Control->Yoke.Y) * 0.5f - Elevator.FrameTime) * DeltaTime * animationSpeed, 0.0f, 1.0f);
-	Aileron.PlayFrameTime(DeltaTime, (1.0f + Control->Yoke.X) * 0.5f);
-	Rudder.PlayFrameTime(DeltaTime, (1.0f - Control->Yoke.Y) * 0.5f);
-	Elevator.PlayFrameTime(DeltaTime, (1.0f + Control->Yoke.Z) * 0.5f);
-
-	Aileron.Update();
-	Rudder.Update();
-	Elevator.Update();
-
-	static constexpr float preMach = 600.0f; // 661kn
-	bool HighSpeed = Control->Velocity > preMach;
-	SPVP.PlayFrameTime(DeltaTime, HighSpeed ? 1.0f : 0.0f);
-	SPVP.Update();
-}

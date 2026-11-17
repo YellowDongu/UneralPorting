@@ -115,39 +115,44 @@ void USelectPanel::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 void USelectPanel::Select()
 {
 	int Index = CurrentListController->GetCurrentIndex();
-
-	if (Index < 0 || Index >= CurrentListController->GetMaxIndex())
-		return;
+	if (CurrentListController->IsValidIndex(Index)) return;
 
 	switch (Phase)
 	{
 	case 0:
 		UpdateWeaponSelection();
 		Phase++;
+
+		if (WeaponListController.GetMaxIndex() == 0)
+		{
+			Phase++;
+			EnterStage();
+		}
+
 		UGameplayStatics::PlaySound2D(this, Selected);
 		break;
 	case 1:
 	{
-		UGameMaster* gameMaster = GetGameInstance<UGameMaster>();
-		FPlayerSpawnInfomation info;
-		info.VehicleID = (*SelectableVehicleList)[VehicleListController.GetCurrentIndex()]->GetVehicleID();
-		info.SpecialWeaponIndex = CurrentListController->GetCurrentIndex();
-
-		// DEBUG/SAFEMODE
-		//info.VehicleID = EVehicleID::F15E;
-		//info.SpecialWeaponIndex = -1;
-		//gameMaster->ReserveLevel(FString(TEXT("MS01")));
-
-		if (gameMaster->GetReserveLevel() == nullptr)
-		{
-			UE_LOG(LogTemp, Error, TEXT("[ERROR] No level selected"));
-			gameMaster->ReserveLevel(FString(TEXT("MS01")));
-		}
-
-		gameMaster->SetPlayerInfomation(info);
-
-		EnterMission.ExecuteIfBound();
-		UGameplayStatics::PlaySound2D(this, AircraftSelected);
+		EnterStage();
+		//UGameMaster* gameMaster = GetGameInstance<UGameMaster>();
+		//FPlayerSpawnInfomation info;
+		//info.VehicleID = (*SelectableVehicleList)[VehicleListController.GetCurrentIndex()]->GetVehicleID();
+		//info.SpecialWeaponIndex = CurrentListController->GetCurrentIndex();
+		//
+		//// DEBUG/SAFEMODE
+		////info.VehicleID = EVehicleID::F15E;
+		////info.SpecialWeaponIndex = -1;
+		////gameMaster->ReserveLevel(FString(TEXT("MS01")));
+		//
+		//if (gameMaster->GetReserveLevel() == nullptr)
+		//{
+		//	UE_LOG(LogTemp, Error, TEXT("[ERROR] No level selected"));
+		//	gameMaster->ReserveLevel(FString(TEXT("MS01")));
+		//}
+		//
+		//gameMaster->SetPlayerInfomation(info);
+		//
+		//EnterMission.ExecuteIfBound();
 		break;
 	}
 	default:
@@ -164,10 +169,6 @@ void USelectPanel::Select()
 void USelectPanel::Deselect()
 {
 	UGameplayStatics::PlaySound2D(this, MenuCancel);
-	int Index = CurrentListController->GetCurrentIndex();
-
-	if (Index < 0 || Index >= CurrentListController->GetMaxIndex())
-		return;
 
 	switch (Phase)
 	{
@@ -215,6 +216,33 @@ void USelectPanel::ReturnMenu(void)
 	}
 }
 
+void USelectPanel::EnterStage(void)
+{
+	UGameplayStatics::PlaySound2D(this, AircraftSelected);
+	UGameMaster* gameMaster = GetGameInstance<UGameMaster>();
+	FPlayerSpawnInfomation info;
+
+	const TWeakObjectPtr<AVehicleBase>& vehicle = (*SelectableVehicleList)[VehicleListController.GetCurrentIndex()];
+	TWeakObjectPtr<AAircraft> aircraft = Cast<AAircraft>(vehicle);
+	TWeakObjectPtr<AMissile> weapon = WeaponListController.GetMaxIndex() == 0 ? nullptr : aircraft->GetFireControlSystem()->GetWeapon(WeaponListController.GetCurrentIndex());
+
+	info.VehicleID = (*SelectableVehicleList)[VehicleListController.GetCurrentIndex()]->GetVehicleID();
+	info.SpecialWeapon = weapon.IsValid() ? weapon->GetWeaponID() : EWeaponID::END;
+
+	// DEBUG/SAFEMODE
+	//info.VehicleID = EVehicleID::F15E;
+	//info.SpecialWeaponIndex = -1;
+	//gameMaster->ReserveLevel(FString(TEXT("MS01")));
+
+	if (gameMaster->GetReserveLevel() == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ERROR] No level selected, Select Default Level"));
+		gameMaster->ReserveLevel(FString(TEXT("MS01")));
+	}
+
+	gameMaster->SetPlayerInfomation(info);
+	EnterMission.ExecuteIfBound();
+}
 
 void USelectPanel::UpdateWeaponSelection(void)
 {

@@ -21,6 +21,7 @@ public:
     TWeakObjectPtr<class USceneComponent> Root;
 	TArray<TWeakObjectPtr<class UStaticMeshComponent>> MeshSlot;
 	TArray<TWeakObjectPtr<class AMissile>> MissileSlot;
+    EWeaponID ID;
 private:
     bool bIsActive = false;
 };
@@ -38,7 +39,7 @@ public:
 	UFireControlSystem();
 
     bool WeaponIntegration(USceneComponent* WeaponComp);
-    void SystemInitialize(int specialSelected);
+    void SystemInitialize(EWeaponID specialSelected);
     virtual void SystemIntegration(TWeakObjectPtr<class URadar> radar, USceneComponent* WeaponContainer, const FBoxSphereBounds& bodyBoundary);
     //virtual void BeginPlay() override;
     //virtual void PostInitializeComponents() override
@@ -47,28 +48,6 @@ public:
     //    refreshTimer = -1.0f;
     //    gunRPM = 1.0f / (gunRPM / 60.0f);
     //}
-    //
-    //void LinkStandard(ReadOnlyCollection<Gauge> gauge)
-    //{
-    //    float value = standard[0].MaxCoolTime;
-    //
-    //    for (int i = 0; i < 2; i++)
-    //    {
-    //        gauge[i].LinkCoolTime(standard[i].GetCoolTime);
-    //        gauge[i].GetMaxCoolTime(value);
-    //    }
-    //}
-    //
-    //void LinkSpecial(ReadOnlyCollection<Gauge> gauge)
-    //{
-    //    float value = specialSlot[special].MissileSlot[0].MaxCoolTime;
-    //    for (int i = 0; i < maxCount; i++)
-    //    {
-    //        gauge[i].LinkCoolTime(specialSlot[special].MissileSlot[i].GetCoolTime);
-    //        gauge[i].GetMaxCoolTime(value);
-    //    }
-    //}
-
     //===========================================
     // Methods
     //===========================================
@@ -78,16 +57,20 @@ public:
     void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target, const FVector& forward, const FVector& position);
     void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target) { AddTarget(target, GetOwner()->GetActorForwardVector(), GetOwner()->GetActorLocation()); }
     void AddTarget(AVehicleBase* target);
+    //void RemoveTarget(const TWeakObjectPtr<class AVehicleBase>& target);
     void RemoveTarget(class AVehicleBase* target);
 	void ReplaceSelectedTarget(class AVehicleBase* target);
     void SetTarget(const TWeakObjectPtr<class AVehicleBase>& target);
 
+
     inline bool ChangeMissile(void)
     {
-        if (special == -1)
-            return false;
+        if (SpecialWeapon == -1) return false;
     
         bSpecialSelected = !bSpecialSelected;
+        if(bSpecialSelected)
+            RefreshSubTargets();
+
         return bSpecialSelected;
     }
 
@@ -102,7 +85,8 @@ public:
     static bool CalculateBombLandingPosition(UWorld* World, const FVector& StartPosition, const FVector& InitialVelocity, FVector& OutLandingPosition, float& landingTime);
 
 private:
-    void RefreshTarget(void);
+    void RefreshTarget(bool changeCurrentTarget = true);
+    void RefreshSubTargets(void);
 
 public:
     //===========================================
@@ -113,6 +97,7 @@ public:
     float SetCalculatedBombTime(float value) { return CalculatedBombTime; }
     
 
+    FSpecialMissileSlot* GetActivedSpecialSlot(void) { if (SpecialWeapon == INDEX_NONE) return nullptr; return &specialSlots[SpecialWeapon]; }
     TWeakObjectPtr<class AMissile> GetWeapon(int specialWeaponIndex);
     TWeakObjectPtr<class AMissile> GetMissile(bool isSpecial);
     void GetCurrentTargets(TArray<FTargetInfo>*& pointer) { pointer = &currentTargets; }
@@ -121,9 +106,9 @@ public:
     void GetSelectSpecial(const bool*& pointer) const { pointer = &bSpecialSelected; }
     bool GetSelectSpecial(void) const { return bSpecialSelected; }
     int GetTeam(void) const { return Team; }
-    int GetSpecial(void) const { return special; }
-    int GetWeaponCount(bool isSpecialWeapon = true) const { if (isSpecialWeapon && special != -1) return MaxCount; return 2; }
-    int GetMultiShoot(void) const { return multiShoot; }
+    int GetSpecial(void) const { return SpecialWeapon; }
+    int GetWeaponCount(bool isSpecialWeapon = true) const { if (isSpecialWeapon && SpecialWeapon != -1) return MaxCount; return 2; }
+    int GetMultiShoot(void) const { return MultiShoot; }
     float GetCalculatedBombTime(void) const { return CalculatedBombTime; }
 
     inline const FWeaponMask& GetMissileAimLayer() const; // 지금 활성화된 무장의 레이어 반환
@@ -131,8 +116,9 @@ public:
     inline EWeaponID GetWeaponID(bool special = true) const;
 
 protected:
+    static constexpr bool bInsertMode{false};
     bool bSpecialSelected{ false }, bRefreshed{ false };
-    int Team{ 0 }, special{ -1 }, MaxCount{ 1 }, multiShoot{ 1 };
+    int Team{ 0 }, SpecialWeapon{ INDEX_NONE }, MaxCount{ 1 }, MultiShoot{ 1 };
 
     float standardCos{ 0.0f }, specialCos{ 0.0f };
     float refreshTime{ 0.0f }, refreshTimer{ 0.0f }, bulletTime{ 0.0f };
@@ -153,5 +139,6 @@ protected:
     TObjectPtr<FControl> Control{ nullptr };
     TWeakObjectPtr<class URadar> Radar{ nullptr };
     FDelegateHandle AddHandle, RemoveHandle;
+    FTimerHandle RefreshFunctionHandle;
     TObjectPtr<class USoundBase> ShootSound, SpecialShootSound;
 };

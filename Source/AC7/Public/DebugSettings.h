@@ -19,4 +19,8 @@ public:
 
     UPROPERTY(EditAnywhere, Config, Category = "Gameplay")
     bool bDebugSpectatorMode = false;
+    UPROPERTY(EditAnywhere, Config, Category = "SoundDebug")
+    float shortDuration = 3;
+    UPROPERTY(EditAnywhere, Config, Category = "SoundDebug")
+    float longDuration = 1.5;
 };

@@ -35,7 +35,9 @@ void ABullet::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     CurrentLifeTime -= DeltaTime;
-    if (CurrentLifeTime <= 0.0f)
+
+    //SetActorLocation(GetActorLocation() + Direction * CurrentSpeed * DeltaTime);
+    if (GetActorLocation().Z < 0.0 || CurrentLifeTime <= 0.0f)
     {
         Release();
         return;
@@ -52,14 +54,16 @@ void ABullet::OnTriggerHit(UPrimitiveComponent* HitComponent, AActor* OtherActor
     if (vehicle != nullptr)
     {
         UE_LOG(LogTemp, Error, TEXT("[ABullet::OnTriggerHit] %s -> %s"), *GetName(), *OtherActor->GetName());
+
+        vehicle->HPDamage(Damage);
+
     }
     else
     {
+        /*
         UE_LOG(LogTemp, Error, TEXT("[ABullet::OnTriggerHit] :::: %s -> %s"), *GetName(), *OtherActor->GetName());
 
         //DrawDebugSphere(GetWorld(), GetActorLocation(), 10.0f, 8, FColor::Red, false, 2.0f);
-        //DrawDebugSphere(GetWorld(), GetActorLocation(), 50.0f, 8, FColor::Red, false, 2.0f);
-        //DrawDebugSphere(GetWorld(), GetActorLocation(), 100.f, 8, FColor::Red, false, 2.0f);
         UBoxComponent* BoxComp = Cast<UBoxComponent>(HitComponent);
         USphereComponent* Sphere = Cast<USphereComponent>(HitComponent);
         UCapsuleComponent* Capsule = Cast<UCapsuleComponent>(HitComponent);
@@ -93,7 +97,7 @@ void ABullet::OnTriggerHit(UPrimitiveComponent* HitComponent, AActor* OtherActor
                 DrawDebugBox(GetWorld(), WorldTransform.GetLocation(), FVector(Box.X, Box.Y, Box.Z), WorldTransform.GetRotation(), FColor::Red, false, Duration, 0, Thickness);
             }
         }
-
+        */
     }
 
 
@@ -122,8 +126,11 @@ void ABullet::Release()
         Destroy();
 }
 
-void ABullet::Shoot(const FVector& position, const FRotator& rotation, float velocity)
+void ABullet::Shoot(const FVector& position, const FRotator& rotation, float velocity, int damage)
 {
+    Damage = damage;
+    CurrentLifeTime = LifeTime;
+
     Body->SetSimulatePhysics(true);
     SetActorEnableCollision(true);
     SetActorHiddenInGame(false);
@@ -132,6 +139,4 @@ void ABullet::Shoot(const FVector& position, const FRotator& rotation, float vel
     SetActorLocationAndRotation(position, rotation);
     Body->AddImpulse(GetActorForwardVector() * velocity * 50.0f);
     //UE_LOG(LogTemp, Error, TEXT("[ABullet::Shoot] %3f : %3f : %3f / %3f : %3f : %3f"), position.X, position.Y, position.Z, Body->GetPhysicsLinearVelocity().X, Body->GetPhysicsLinearVelocity().Y, Body->GetPhysicsLinearVelocity().Z);
-    
-    CurrentLifeTime = LifeTime;
 }

@@ -25,11 +25,14 @@ public:
 	virtual void Lock(FTargetInfo& targetData, float DeltaTime, const TWeakObjectPtr<class AVehicleBase>& owner) override;
 
 	void Explode();
+
 	double GetBlastArea(void) { return BlastArea; }
+	void SetBombIndicatorHUD(const TWeakObjectPtr<AActor>& actor) { BombIndicatorHUD = actor; }
 
 protected:
 	float ElapsedTime{ 0.0f }, LandingTime{ 10.0f };
 	double BlastArea{ 500.0 }, ClosedArea{ 0.0 };
 
 	FVector TrackedPosition, StartPosition;
+	TWeakObjectPtr<AActor> BombIndicatorHUD{ nullptr };
 };

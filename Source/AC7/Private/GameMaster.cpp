@@ -19,7 +19,7 @@ void UGameMaster::Init()
     GetCollector();
 
     PlayerSpawnInfomation.VehicleID = EVehicleID::F15E;
-    PlayerSpawnInfomation.SpecialWeaponIndex = -1;
+    PlayerSpawnInfomation.SpecialWeapon = EWeaponID::END;
 }
 
 const TObjectPtr<UBluePrintCollector>& UGameMaster::GetCollector()
@@ -58,8 +58,7 @@ void UGameMaster::OnStart()
 	//PlayerSpawnInfomation.SpecialWeaponIndex = 2;
 
     //PlayerSpawnInfomation.VehicleID = EVehicleID::F14D;
-    PlayerSpawnInfomation.SpecialWeaponIndex = 0;
-
+    PlayerSpawnInfomation.SpecialWeapon = EWeaponID::UGB;
 }
 
 #include "Camera/CameraComponent.h"

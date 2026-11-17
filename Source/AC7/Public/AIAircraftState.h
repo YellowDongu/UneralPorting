@@ -24,6 +24,7 @@ public:
 
 	virtual bool Start(const TSharedPtr<DataSetterBlock>& data = nullptr);
 	virtual void SetDefaultData(DefaultDataBlock* data) override;
+	virtual void Release(void) override { SquadData = nullptr; Control = nullptr; Owner.Reset(); Radar.Reset(); TeamSystem.Reset(); }
 
 	bool HorizontalRotation(const FVector& targetPosition, double* leftSquaredLength = nullptr);
 
@@ -183,7 +184,8 @@ public:
 	void AddAviliableManeuver(const FString& name) { AviliableManeuver.Add(name); }
 protected:
 	int Phase{ 0 }, CollisionCheck{ 0 };
-	float Radius{ 100.0f }, Timer{ 1.0f };
+	float Radius{ 100.0f }, Timer{ 0.0f };
+	static constexpr float IdleTimer{ 2.5f };
 
 	TArray<FString> AviliableManeuver;
 	TArray<FWaypointData> WaypointData;
@@ -206,12 +208,11 @@ public:
 	virtual bool Start(const TSharedPtr<DataSetterBlock>& data = nullptr) override;
 	virtual TSharedPtr<OverridedDataBlock> SetOverrideData(void) override;
 
-	void Initiate();
+	void Initiate();  // deprecated
 private:
-	FRotator TargetRotation;
-	bool ReturnFlag{ true };
-	float Timer{ DelayTime };
-	double Random{ 0.0 };
+	FRotator TargetRotation; // deprecated
+	bool ReturnFlag{ true }; // deprecated
+	double Random{ 0.0 };  // deprecated
 	static constexpr float DelayTime{ 5.0f };
-	static constexpr double AltitudeMiddleValue{ (MaximumAltitude + MinimumAltitude) * 0.5 };
+	static constexpr double AltitudeMiddleValue{ (MaximumAltitude + MinimumAltitude) * 0.5 }; // deprecated
 };

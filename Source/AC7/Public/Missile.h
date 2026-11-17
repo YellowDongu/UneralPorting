@@ -39,7 +39,7 @@ public:
     float GetLockAngleCos(void) const { return AngleCos; }
     float GetMaxRange(void) const { return MaxRange; }
     int GetTargetCount(void) const { return targetCount; }
-    int GetMultiShoot(void) const { return multiShoot; }
+    int GetMultiShoot(void) const { return MultiShoot; }
     int GetDamage(void) const { return damage; }
     const FWeaponMask& GetAimLayer() const { return AimLayer; }
     int GetAimMask() const { return AimLayer.GetMask(); }
@@ -52,7 +52,7 @@ public:
 protected:
     bool bIsCoolTime{ false }, bIsProjectile{ false };
     float Time{ 0.0f }, DistanceSquare{ 0.0f }, AngleCos{ 0.0f }, FlyDistance{ TNumericLimits<float>::Max() };
-    double ImpactDistance{ 100.0 }; // squared at runtime
+    double ImpactDistance{ 500.0 }; // squared at runtime
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     EWeaponID MissileID{ EWeaponID::NULLID };
@@ -73,7 +73,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     float lockSpeed = 1.0f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
-    int multiShoot = 1;
+    int MultiShoot = 1;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     FWeaponMask AimLayer;
 

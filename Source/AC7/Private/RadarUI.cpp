@@ -25,12 +25,6 @@ void URadarUI::BindPlayer(AAircraft* vehicle, APlayerPilot* player)
 
 	for (int i = 0; i < 50; i++)
 		Stored.Add(GetTargetUI(CurrentCanvas));
-
-	USoundSubsystem* sound = GetGameInstance()->GetSubsystem<USoundSubsystem>();
-	WarnSound = sound->GetSound(TEXT("MissileWarn"));
-	WarnSoundChannel = sound->GetChannel(TEXT("MissileWarnChannel"), GetWorld());
-	check(WarnSound.Get()); check(WarnSoundChannel.Get());
-	WarnSoundChannel->SetSound(WarnSound);
 }
 
 void URadarUI::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
@@ -38,27 +32,6 @@ void URadarUI::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 	Super::NativeTick(MyGeometry, DeltaTime);
 
 	Refresh(DeltaTime);
-
-	if (!PlayerRadar->Warning())
-	{
-		if (WarnSoundChannel->IsPlaying())
-			WarnSoundChannel->Stop();
-		return;
-	}
-
-	if (bSoundState)
-	{
-		if (!WarnSoundChannel->IsPlaying())
-		{
-			SoundTimer = 0.0f;
-			bSoundState = false;
-		}
-		return;
-	}
-
-	SoundTimer += DeltaTime;
-	if (SoundTimer >= (PlayerRadar->Alart() ? AlartSoundDuration : SoundDuration))
-		WarnSoundChannel->Play();
 }
 
 void URadarUI::Refresh(float DeltaTime)
@@ -84,6 +57,13 @@ void URadarUI::Refresh(float DeltaTime)
 			}
 
 			AVehicleBase* target = *iterator;
+
+			if (!IsAlive(target))
+			{
+				i--;
+				continue;
+			}
+
 			FVector relatedPosition = target->GetActorLocation() - LeftBottomBoarder;
 			relatedPosition.X = relatedPosition.X / (RightTopBoarder.X - LeftBottomBoarder.X) * LargeRadarSize.X - LargeRadarSize.X * 0.5;
 			relatedPosition.Y = relatedPosition.Y / (RightTopBoarder.Y - LeftBottomBoarder.Y) * LargeRadarSize.Y - LargeRadarSize.Y * 0.5;

@@ -1,6 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UnGuidedBomb.h"
+
+#include "Components/WidgetComponent.h"
+
 #include "ObjectFactory.h"
 #include "Aircraft.h"
 #include "DrawDebugHelpers.h"
@@ -27,6 +30,9 @@ void AUnGuidedBomb::Tick(float DeltaTime)
     if (ElapsedTime >= LandingTime)
     {
         Explode();
+        if (BombIndicatorHUD.IsValid())
+            BombIndicatorHUD->Destroy();
+        BombIndicatorHUD.Reset();
         return;
     }
     
@@ -50,6 +56,9 @@ void AUnGuidedBomb::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBa
     if (LandingTime <= 0)
     {
         Release();
+        if (BombIndicatorHUD.IsValid())
+            BombIndicatorHUD->Destroy();
+        BombIndicatorHUD.Reset();
         return;
     }
 
@@ -78,12 +87,42 @@ int AUnGuidedBomb::Shoot(TWeakObjectPtr<class AVehicleBase> owner, FTargetInfo* 
     //mesh->SetVisibility(true);
 
     TWeakObjectPtr<AUnGuidedBomb> newInstance = Cast<AUnGuidedBomb>(CreateProjectile());
-    if (newInstance == nullptr)
+    if (!newInstance.IsValid())
     {
         UE_LOG(LogTemp, Error, TEXT("[AUnGuidedBomb::Shoot] CREATE ERROR"));
         return -1;
     }
-    newInstance->Initialize(this, owner, locked->Target);
+    newInstance->Initialize(this, owner, nullptr);
+    if (BombIndicatorHUD.IsValid())
+    {
+        newInstance->BombIndicatorHUD = GetWorld()->SpawnActor<AActor>(BombIndicatorHUD->GetClass(), BombIndicatorHUD->GetActorTransform(), FActorSpawnParameters());
+        UWidgetComponent* widget = static_cast<UWidgetComponent*>(newInstance->BombIndicatorHUD->GetComponentByClass(UWidgetComponent::StaticClass()));
+        widget->UpdateWidget();
+        UMaterialInstanceDynamic* material = widget->GetMaterialInstance();
+        if(IsValid(material))
+            material->SetVectorParameterValue(TEXT("Color"), RedHUD);
+        /*
+        else
+        {
+            widget->UpdateMaterialInstanceParameters()
+            widget->UpdateMaterialInstance()
+            widget->OnMaterialInstanceUpdated.AddLambda([this]()
+                                                                 {
+                                                                     UMaterialInstanceDynamic* MID =
+                                                                         WidgetComponent->GetMaterialInstance();
+
+                                                                     if (MID)
+                                                                     {
+                                                                         MID->SetScalarParameterValue(
+                                                                             TEXT("MyParameter"), 1.0f);
+                                                                     }
+                                                                 });
+        }
+        */
+    }
+        
+        
+    //newInstance->BombIndicatorHUD->SetActorLocation(TrackedPosition);
 
     bIsCoolTime = true;
     GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AUnGuidedBomb::CoolTimeEnd, coolTime, false);

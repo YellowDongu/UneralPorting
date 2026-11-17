@@ -24,10 +24,11 @@ public:
 	//virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual void NativeConstruct(void) override;
 	UFUNCTION(BlueprintCallable) void LinkDisplayCase(class ADisplayCase* target);
-
+	
 	void Select(void);
 	void Deselect(void);
 	void ReturnMenu(void);
+	void EnterStage(void);
 	void UpdateWeaponSelection(void);
 
 	void Active(void) { bActive = true; }

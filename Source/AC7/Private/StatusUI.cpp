@@ -61,3 +61,12 @@ void UStatusUI::BindPlayer(class AAircraft* vehicle, class APlayerPilot* player)
 	//HPCanvas->SetVisibility(ESlateVisibility::Visible);
 	//WeaponCanvas->SetVisibility(ESlateVisibility::Visible);
 }
+
+void UStatusUI::SetColor(FLinearColor NewColor)
+{
+	Gauge->SetColor(NewColor);
+
+	//class UCanvasPanel* BaseCanvas{ nullptr };
+	//class UCanvasPanel* TextPanel{ nullptr };
+	//class UCanvasPanel* GaugePanel{ nullptr };
+}

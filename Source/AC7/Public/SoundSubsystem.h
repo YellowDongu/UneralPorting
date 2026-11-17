@@ -24,6 +24,7 @@ public:
 	void AsyncLoadSound(const TArray<FString>& name);
 
 	bool PlaySound(const FString& name, TObjectPtr<USoundBase>* output = nullptr, TWeakObjectPtr<UAudioComponent>* outputChannel = nullptr); // simple sound play
+	bool PlaySound(const FString& name, const FVector& position, TObjectPtr<USoundBase>* output = nullptr, TWeakObjectPtr<UAudioComponent>* outputChannel = nullptr); // simple sound play
 	TObjectPtr<USoundBase> GetSound(const FString& name);
 	TWeakObjectPtr<UAudioComponent> GetChannel(const FString& name) { return GetChannel(name, GetWorld()); }
 	TWeakObjectPtr<UAudioComponent> GetChannel(const FString& name, UWorld* world);
@@ -43,16 +44,19 @@ struct AC7_API FSoundSet
 
 	FSoundSet() = default;
 
+	void Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound, UWorld* world);
 	void Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound);
 	void BlinkSound(float maxTime, float deltaTime);
+	void ChangeSound(const TObjectPtr<USoundBase>& Sound);
 	void Stop(void);
 	void Play(void);
 	bool IsPlaying(bool atChannel = true);
 
 	TWeakObjectPtr<UAudioComponent> Channel{ nullptr };
 	TObjectPtr<USoundBase> Sound{ nullptr };
-
+	float FloatValue{ TNumericLimits<float>::Max() }; // �ٿ뵵
+	
 private:
 	bool bIsPlaying{ false };
-	float Timer{ 0.0f };
+	float Timer{ TNumericLimits<float>::Max() };
 };

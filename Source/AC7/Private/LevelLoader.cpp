@@ -78,7 +78,7 @@ bool ULevelLoader::GetAssetNeeded(const FSoftObjectPath& path, TSet<FSoftObjectP
     const FAssetData assetData = AssetRegistry.GetAssetByObjectPath(path, true);
 
     if (!assetData.IsValid())
-        return true;
+        return false;
 
     //UE::AssetRegistry::FDependencyQuery Query;
     //Query.Required = UE::AssetRegistry::EDependencyProperty::Hard;
@@ -126,40 +126,41 @@ bool ULevelLoader::GetAssetNeeded(const FSoftObjectPath& path, TSet<FSoftObjectP
 }
 
 
-const TSharedPtr<FStreamableHandle>* ULevelLoader::AssetSyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& pathList, bool override, const FStreamableDelegate& delegate)
+void ULevelLoader::AssetSyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& pathList, bool override, const FStreamableDelegate& delegate)
 {
     if (pathList.IsEmpty())
-        return nullptr;
+        return;
 
-    TSharedPtr<FStreamableHandle>* handle = &LoadedAssetHandles.FindOrAdd(handleName);
-    if (!override && handle->IsValid())
-        return nullptr;
+    TSharedPtr<FStreamableHandle>& handle = LoadedAssetHandles.FindOrAdd(handleName);
+    if (!override && handle.IsValid())
+        return;
 
-    handle->Reset();
+    handle.Reset();
     TSet<FSoftObjectPath> assetsToLoad;
     
     for (auto& item : pathList)
         GetAssetNeeded(item, assetsToLoad);
 
     if (IsInGameThread())
-        *handle = UAssetManager::GetStreamableManager().RequestAsyncLoad(assetsToLoad.Array(), delegate);
+        handle = UAssetManager::GetStreamableManager().RequestAsyncLoad(assetsToLoad.Array(), delegate);
     else
+    {
+        handle.Reset();
         AsyncTask(ENamedThreads::GameThread, [assetsToLoad, handle, delegate]()
                   {
-                      *handle = UAssetManager::GetStreamableManager().RequestAsyncLoad(assetsToLoad.Array(), delegate);
+                      UAssetManager::GetStreamableManager().RequestAsyncLoad(assetsToLoad.Array(), delegate);
                   });
-
-    return handle;
+    }
 }
 
-const TSharedPtr<FStreamableHandle>* ULevelLoader::AssetAsyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& pathList, bool override, const FStreamableDelegate& delegate)
+void ULevelLoader::AssetAsyncLoad(const FString& handleName, const TArray<FSoftObjectPath>& pathList, bool override, const FStreamableDelegate& delegate)
 {
     if (pathList.IsEmpty())
-        return nullptr;
+        return;
 
     TSharedPtr<FStreamableHandle>* handle = &LoadedAssetHandles.FindOrAdd(handleName);
     if (!override && handle->IsValid())
-        return nullptr;
+        return;
 
     handle->Reset();
 
@@ -171,15 +172,17 @@ const TSharedPtr<FStreamableHandle>* ULevelLoader::AssetAsyncLoad(const FString&
                               GetAssetNeeded(item, assetsToLoad);
 
                           if (assetsToLoad.IsEmpty())
+                          {
+                              delegate.Execute();
                               return;
+                          }
 
                           AsyncTask(ENamedThreads::GameThread, [this, assetsToLoad, handleName, delegate]()
                                     {
-                                        TSharedPtr<FStreamableHandle>& validHandle = *LoadedAssetHandles.Find(handleName);
+                                        TSharedPtr<FStreamableHandle>& validHandle = LoadedAssetHandles.FindOrAdd(handleName);
                                         validHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(assetsToLoad.Array(), delegate);
                                     });
                       });
-    return handle;
 
 //    TSet<FSoftObjectPath> assetsToLoad;
 //    if (!GetAssetNeeded(targetPath, assetsToLoad))

@@ -135,8 +135,9 @@ void URadar::DeployFlare()
 	int TotalCalls = DeployAmount * SubFunctionCount;
 	int BaseCount = TotalCount / TotalCalls;
 	int Remainder = TotalCount % TotalCalls;
-	DeployAmount--;
 
+	check(objectFactory);
+	check(owner);
 
 	auto iterator = Tracing.CreateConstIterator();
 	TArray<TWeakObjectPtr<AMissile>> list;
@@ -177,6 +178,7 @@ void URadar::DeployFlare()
 
 	UGameplayStatics::PlaySoundAtLocation(this, FlareFire, GetOwner()->GetActorLocation());
 
+	DeployAmount--;
 	if (DeployAmount <= 0)
 		GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
 

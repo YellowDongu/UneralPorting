@@ -19,9 +19,9 @@ public:
 	virtual void NativeTick(const FGeometry& myGeometry, float deltaTime) override;
 
 private:
-	float Timer{ 0.0f };
-	int Flag{-1};
 	bool bPressed{ false };
+	float Timer{ 0.0f };
+	int Flag{ -1 };
 
 	FTimerHandle TimerHandle;
 

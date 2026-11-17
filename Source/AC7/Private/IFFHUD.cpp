@@ -66,9 +66,9 @@ void UIFFHUD::Update(float DeltaTime)
 {
 	if (!IsAlive(TargetVehicle))
 	{
-		TargetVehicle = nullptr;
 		Active(false);
 		RetriveUI.Broadcast(this);
+		TargetVehicle.Reset();
 		return;
 	}
 

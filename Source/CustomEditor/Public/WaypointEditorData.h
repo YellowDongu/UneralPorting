@@ -69,7 +69,7 @@ private:
 
     TArray<FVector> SplineSamples;
 
-    float DistanceSampleSpacing = 1.0f;
+    float DistanceSampleSpacing = 10.0f;
     TArray<FVector> DistanceSamples;
     TArray<float> DistanceSampleDistances;
     float TotalSplineLength = 0.0f;

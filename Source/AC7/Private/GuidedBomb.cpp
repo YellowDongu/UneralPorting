@@ -1,5 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "GuidedBomb.h"
+
+#include "Components/WidgetComponent.h"
+
 #include "GroundVehicle.h"
 #include "ObjectFactory.h"
 
@@ -28,15 +31,20 @@ void AGuidedBomb::Tick(float DeltaTime)
         UE_LOG(LogTemp, Log, TEXT("[AStandardMissile::Tick] Impact"));
         GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), TrackedPosition, 150.0f, 2.0f);
         Explode();
+        if (BombIndicatorHUD.IsValid())
+            BombIndicatorHUD->Destroy();
+        BombIndicatorHUD.Reset();
         return;
     }
 
     ElapsedTime += DeltaTime;
 
-    if (IsValid(Target.Get()) && !Target->IsHidden())
+    if (IsAlive(Target))
+    {
         TrackedPosition = Target->GetActorLocation();
-    else
-        Target = nullptr;
+        if (BombIndicatorHUD.IsValid())
+            BombIndicatorHUD->SetActorLocation(TrackedPosition);
+    }
 
     FVector nextPosition = FMath::Lerp(StartPosition, TrackedPosition, ElapsedTime / LandingTime);
     SetActorRotation(FMath::RInterpTo(GetActorRotation(), (nextPosition - GetActorLocation()).Rotation(), DeltaTime, rotationSpeed));
@@ -61,7 +69,13 @@ bool AGuidedBomb::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr
 
     newInstance->StartPosition = GetActorLocation();
     newInstance->TrackedPosition = locked->GetActorLocation();
-    newInstance->LandingTime = static_cast<float>((newInstance->StartPosition.Z - newInstance->TrackedPosition.Z) / 980.0) * 0.8f;
+    newInstance->LandingTime = FMath::Abs(static_cast<float>((newInstance->StartPosition.Z - newInstance->TrackedPosition.Z) / 980.0 * 0.8));
+    if (BombIndicatorHUD.IsValid())
+    {
+        newInstance->BombIndicatorHUD = GetWorld()->SpawnActor<AActor>(BombIndicatorHUD->GetClass(), BombIndicatorHUD->GetActorTransform(), FActorSpawnParameters());
+        UWidgetComponent* widget = static_cast<UWidgetComponent*>(newInstance->BombIndicatorHUD->GetComponentByClass(UWidgetComponent::StaticClass()));
+        widget->GetMaterialInstance()->SetVectorParameterValue(TEXT("Color"), RedHUD);
+    }
 
     bIsCoolTime = true;
     GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AGuidedBomb::CoolTimeEnd, coolTime, false);

@@ -20,9 +20,14 @@ public:
 	virtual void Update(float DeltaTime) override;
 	virtual void SystemIntegration(TWeakObjectPtr<class URadar> radar, USceneComponent* WeaponContainer, const FBoxSphereBounds& bodyBoundary = FBoxSphereBounds()) override;
 
+	void TrackGun(float DeltaTime);
+	void TrackMissile(float DeltaTime);
+	void TurretSet(float DeltaTime);
 
-	bool IsMissileEmpty() { return standard.IsEmpty(); }
-	bool CanShootGun() { return bGunEnable; }
+	bool IsMissileEmpty(void) { return standard.IsEmpty(); }
+	bool CanShootGun(void) { return bGunEnable; }
+	bool Aimed(void) { return TargetAngleCos > AngleCos; }
+	bool Locked(void) { return !currentTargets.IsEmpty() && currentTargets[0].IsLock(); }
 
 	const float& GetTargetYaw() const { return TargetYaw; }
 	const float& GetTargetPitch() const { return TargetPitch; }
@@ -30,7 +35,11 @@ public:
 	const float& GetTurretPitch() const { return *TurretPitch; }
 
 private:
+	bool bEnemySpotted{ false };
 	float TargetYaw{ 0.0f }, TargetPitch{ 0.0f };
+	float YawDelta{ 0.0f }, PitchDelta{ 0.0f };
+	double AngleCos{ 0.0f }, TargetAngleCos{-1.0f};
+	FTickEvent UpdateEvent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	bool bGunEnable{ false };
@@ -47,5 +56,5 @@ private:
 
 	float* TurretYaw{ nullptr },* TurretPitch{ nullptr };
 	TWeakObjectPtr<USkeletalMeshComponent> BodyMesh{ nullptr };
-	FVector TurretPosition;
+	FVector TurretPosition, TargetDirection;
 };

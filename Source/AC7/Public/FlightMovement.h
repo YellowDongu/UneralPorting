@@ -29,29 +29,17 @@ public:
 	void FollowWaypoint(float deltaTime);
 	void SetWayPoint(const TArray<FWaypointData>& data, bool NeedCompensatePosition = false);
 	void InjectWayPoint(const TArray<FWaypointData>& data) { WaypointData = data; }
+	void InjectWayPoint(const FWaypointData& data) { WaypointData.Add(data); }
 	void ClearWayPoint(void) { WaypointData.Reset(); }
-
 	bool IsFollowingWayPoint() { return !WaypointData.IsEmpty(); }
+
 private:
 	TArray<FWaypointData> WaypointData;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	double WaypointScale{1.0};
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	float NonExceedSpeed{ 130.0 };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	float IdleSpeed{ 33.0 };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	float enginePower{ 100.0 };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	float airbrakePower{ 2.0 };
+	double WaypointScale{ 1.0 };
+	float NonExceedSpeed{ 130.0f }, IdleSpeed{ 33.0f }, EnginePower{ 100.0f }, AirbrakePower{ 2.0f };
 
 	struct FControl* Control{ nullptr };
 
-	FVector force;
-	FVector rotationDelta = FVector::ZeroVector;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	FVector dragFactor{ 0.25, 0.0001, 0.0001 };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spec", meta = (AllowPrivateAccess = "true"))
-	FVector rotationSpeed{ 55.0, 55.0, 2.5 };
+	FVector Force{ FVector::ZeroVector }, RotationDelta{ FVector::ZeroVector }, DragFactor{ 0.25, 0.0001, 0.0001 }, RotationSpeed{ 55.0, 55.0, 2.5 };
 };

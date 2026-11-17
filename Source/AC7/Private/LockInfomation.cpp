@@ -3,17 +3,17 @@
 
 #include "LockInfomation.h"
 
-#include "Aircraft.h"
-//#include "PlayerPilot.h"
-#include "FireControlSystem.h"
-#include "UnGuidedBomb.h"
-#include "GuidedBomb.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 //#include "Kismet/GameplayStatics.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/WidgetComponent.h"
 
+#include "Aircraft.h"
+//#include "PlayerPilot.h"
+#include "FireControlSystem.h"
+#include "UnGuidedBomb.h"
+#include "GuidedBomb.h"
 
 TSharedPtr<LockSet> LockSet::Create(IndicatorCreationData& data)
 {
@@ -98,6 +98,13 @@ void LockIndicator::Initialize(UCanvasPanel* canvasPanel, TSubclassOf<UUserWidge
 
 void LockIndicator::Update(float deltaTime, FTargetInfo* target)
 {
+	if (target == nullptr)
+	{
+		SetActive(false);
+		return;
+	}
+
+	SetActive(true);
 	TraceTarget(*target);
 }
 
@@ -171,6 +178,20 @@ void BombIndicator::Initialize(TWeakObjectPtr<UFireControlSystem> fcs, TSubclass
 	area *= 2.0;
 	RangeIndicatorUI->SetRelativeScale3D(FVector(1.0, area, area));
 	CalculateBombLandingPosition.BindUObject(fcs.Get(), &UFireControlSystem::CalculateBombLandingPosition);
+
+	auto slot = FCS->GetActivedSpecialSlot();
+
+	for (auto& item : slot->MissileSlot)
+	{
+		auto ugb = Cast<AUnGuidedBomb>(item);
+		if (ugb != nullptr)
+		{
+			ugb->SetBombIndicatorHUD(RangeIndicator);
+			continue;
+		}
+	}
+	SetColor(GreenHUD);
+	SetActive(CalculateBombLandingPosition.IsBound());
 }
 
 void BombIndicator::SetColor(const FLinearColor& color)
@@ -178,6 +199,8 @@ void BombIndicator::SetColor(const FLinearColor& color)
 	if (CurrentColor == color) return;
 
 	CurrentColor = color;
+	if (RangeIndicatorUI->GetMaterialInstance() == nullptr)
+		return;
 	RangeIndicatorUI->GetMaterialInstance()->SetVectorParameterValue(TEXT("Color"), color);
 	//RangeIndicatorUI->GetUserWidgetObject()->SetColorAndOpacity(color);
 }
@@ -185,6 +208,7 @@ void BombIndicator::SetColor(const FLinearColor& color)
 void BombIndicator::Update(float deltaTime, FTargetInfo* target)
 {
 	DisplayExpactPosition();
+	SetColor(GreenHUD);
 }
 
 void BombIndicator::SetActive(bool value)
@@ -200,15 +224,14 @@ void BombIndicator::SetActive(bool value)
 void BombIndicator::DisplayExpactPosition()
 {
 	FVector position;
-	if (CalculateBombLandingPosition.IsBound())
+	if (!CalculateBombLandingPosition.IsBound())
+		return;
+
+
+	if (CalculateBombLandingPosition.Execute(position))
 	{
-		if (CalculateBombLandingPosition.Execute(position))
-		{
-			SetActive(true);
-			RangeIndicator->SetActorLocation(position);
-		}
-		else
-			SetActive(false);
+		SetActive(true);
+		RangeIndicator->SetActorLocation(position);
 	}
 	else
 		SetActive(false);
@@ -242,22 +265,48 @@ void LockableBombIndicator::Initialize(class UCanvasPanel* canvasPanel, TSubclas
 	CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
 	CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
 	//CanvasSlot->SetZOrder(10);
+
+	auto slot = FCS->GetActivedSpecialSlot();
+
+	for (auto& item : slot->MissileSlot)
+	{
+		auto ugb = Cast<AGuidedBomb>(item);
+		if (ugb != nullptr)
+		{
+			ugb->SetBombIndicatorHUD(RangeIndicator);
+			continue;
+		}
+	}
+
+	SetColor(GreenHUD);
 }
 
 void LockableBombIndicator::Update(float deltaTime, FTargetInfo* target)
 {
+	if (target == nullptr)
+	{
+		SetActive(false);
+		return;
+	}
+
+	SetActive(true);
 	TraceTarget(*target);
 }
 
 void LockableBombIndicator::SetColor(const FLinearColor& color)
 {
-	if (CurrentColor == color) return;
+	if (CurrentColor == color)
+		return;
 
 	CurrentColor = color;
 	LockRectangle->SetColorAndOpacity(color);
+
+	if (RangeIndicatorUI->GetMaterialInstance() == nullptr)
+		return;
 	RangeIndicatorUI->GetMaterialInstance()->SetVectorParameterValue(TEXT("Color"), color);
 	//RangeIndicatorUI->GetUserWidgetObject()->SetColorAndOpacity(color);
 }
+
 void LockableBombIndicator::SetActive(bool value)
 {
 	if (bIsActive == value)
@@ -288,8 +337,11 @@ void LockableBombIndicator::TraceTarget(FTargetInfo& target)
 	if (UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PlayerController.Get(), Target->GetActorLocation(), screenPos, true))
 		CanvasSlot->SetPosition(FMath::Lerp(screenPos, InitialPosition, target.Lock));
 
-
-	SetColor(target.Lock >= 0.01f ? FColor::Green : FColor::Red);
+	bool lock = target.IsLock();
+	if (bIsLock == lock)
+		return;
+	bIsLock = lock;
+	SetColor(bIsLock ? GreenHUD : RedHUD);
 }
 
 void LockableBombIndicator::StartTraceTarget(FTargetInfo& target)
@@ -340,6 +392,13 @@ void SAAMLockIndicator::Update(float deltaTime, FTargetInfo* target)
 		return;
 	}
 
+	if (target == nullptr)
+	{
+		LockIndicator::SetActive(false);
+		return;
+	}
+
+	LockIndicator::SetActive(true);
 	LockIndicator::Update(deltaTime, target);
 
 	RangeIndicator->SetActorLocationAndRotation(Owner->GetActorLocation(), Owner->GetActorRotation());

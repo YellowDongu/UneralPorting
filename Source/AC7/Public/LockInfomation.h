@@ -31,7 +31,7 @@ public:
 
 protected:
 	FLinearColor CurrentColor;
-	bool bIsActive{ true };
+	bool bIsActive{ true }, bIsLock{ false };
 };
 
 class AC7_API LockIndicator : public LockSet

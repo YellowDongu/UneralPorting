@@ -73,21 +73,21 @@ void UTeamManagementSystem::TeamRemove(TeamData& target)
 #define LOG(Text, ...) UE_LOG(LogTemp, Error, Text, ##__VA_ARGS__)
 bool UTeamManagementSystem::LeaderCheck(TeamData& team)
 {
-	// Reset 되었거나 스쿼드에 속하지 않은 상태
-	if (team.Leader == nullptr)
+	if (team.Leader == nullptr) // Reset or NotInitialized => abnomal
 		return false;
 
-	if (team.Leader->IsValid())
+	if (IsAlive(*team.Leader))
 		return true;
 
-	TUniquePtr<SquadSystem>* pointer = SquadList.Find(team.Leader);
-	if (pointer == nullptr)
+	if (!SquadList.Contains(team.Leader))
 	{
+		team.Reset();
+		TeamAdd(team);
 		LOG(TEXT("[UTeamManagementSystem::LeaderCheck] squad == nullptr"));
-		return false;
+		return true;
 	}
 
-	TUniquePtr<SquadSystem>& squad = *pointer;
+	TUniquePtr<SquadSystem>& squad = *SquadList.Find(team.Leader);
 	if (squad->TeamList.IsEmpty())
 	{
 		LOG(TEXT("[UTeamManagementSystem::LeaderCheck] squad->TeamList.IsEmpty()"));
@@ -98,22 +98,21 @@ bool UTeamManagementSystem::LeaderCheck(TeamData& team)
 
 	for (auto iterator = squad->TeamList.CreateIterator(); iterator; ++iterator)
 	{
-		if (!iterator->Key.IsValid())
+		if (!IsAlive(iterator->Key))
 		{
 			iterator.RemoveCurrent();
+			if (squad->TeamList.IsEmpty())
+			{
+				LOG(TEXT("[UTeamManagementSystem::LeaderCheck] ERROR : squad->TeamList.IsEmpty()"));
+				SquadList.Remove(&squad->Leader);
+				team.Reset();
+				return false;
+			}
 			continue;
 		}
 
 		if (iterator->Value == nullptr)
 			iterator->Value = &iterator->Key->GetSquadData();
-	}
-
-	if (squad->TeamList.IsEmpty())
-	{
-		LOG(TEXT("[UTeamManagementSystem::LeaderCheck] squad->TeamList.IsEmpty()"));
-		SquadList.Remove(&squad->Leader);
-		team.Reset();
-		return false;
 	}
 
 	int i = 0;

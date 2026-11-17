@@ -19,9 +19,9 @@ public:
 	void Attach(class UCanvasPanel* Canvas);
 	void ChangeImage(class AVehicleBase* target);
 
+	static float GetSize(void) { return Size; }
+	void SetColor(FLinearColor NewColor) { /*변하게 할 지 말지 고민중*/ }
 
-	static float GetSize() { return Size; }
-	inline void SetColor(const FLinearColor& NewColor);
 private:
 	int Mask{ -1 }, TeamMask{ -1 };
 	static float Size;

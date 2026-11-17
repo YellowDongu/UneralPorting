@@ -13,6 +13,7 @@
 #include "Bullet.h"
 #include "AIAircraftPilot.h"
 #include "TeamManagementSystem.h"
+#include "SoundSubsystem.h"
 
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -82,6 +83,7 @@ void UObjectFactory::Explosion(UWorld* world, const FVector& position, float Siz
 	auto newParticle = UNiagaraFunctionLibrary::SpawnSystemAtLocation(world, ExplosionParticle, position, FRotator::ZeroRotator, FVector::OneVector, true, true, ENCPoolMethod::AutoRelease);
 	newParticle->SetVariableFloat(TEXT("User.Lifetime"), lifeTime);
 	newParticle->SetVariableFloat(TEXT("User.Size"), Size);
+	world->GetGameInstance()->GetSubsystem<USoundSubsystem>()->PlaySound(TEXT("Explosion"), position);
 }
 
 TWeakObjectPtr<class AVehicleBase> UObjectFactory::Instantiate(FSpawnInfomation& spawnInfomation, UTeamManagementSystem* teamSystem, const TWeakObjectPtr<AVehicleBase>& Leader, UWorld* world)
@@ -122,7 +124,7 @@ TWeakObjectPtr<class AVehicleBase> UObjectFactory::Instantiate(FSpawnInfomation&
 		newInstance->SquadDataReset();
 		teamSystem->TeamAdd(newInstance->GetSquadData(), Leader);
 		player->Attach(static_cast<AAircraft*>(newInstance.Get()));
-
+		newInstance->SetMoveable(true);
 		ActivedPool[spawnInfomation.TeamIndex].Add(newInstance);
 		bIsPlayerSpawned = true;
 	}
@@ -130,6 +132,10 @@ TWeakObjectPtr<class AVehicleBase> UObjectFactory::Instantiate(FSpawnInfomation&
 	{
 		newInstance = Instantiate(*world, spawnInfomation.VehicleID);
 		if (newInstance == nullptr) return nullptr;
+
+#ifdef BlockAISpecial
+		spawnInfomation.SpecialWeapon = -1; // block Special
+#endif
 		newInstance->SystemInitialize(spawnInfomation);
 
 		TWeakObjectPtr<AAIPilot> aiPilot = Instantiate(world, spawnInfomation);
@@ -142,7 +148,7 @@ TWeakObjectPtr<class AVehicleBase> UObjectFactory::Instantiate(FSpawnInfomation&
 		newInstance->SquadDataReset();
 		teamSystem->TeamAdd(newInstance->GetSquadData(), Leader);
 		aiPilot->Attach(newInstance.Get());
-
+		newInstance->SetMoveable(true);
 		ActivedPool[spawnInfomation.TeamIndex].Add(newInstance);
 		if (spawnInfomation.IsTGT)
 			TGTCount++;
@@ -225,6 +231,7 @@ TWeakObjectPtr<AVehicleBase> UObjectFactory::Instantiate(UWorld& world, EVehicle
 		}
 	}
 
+	newInstance->SetMoveable(false);
 	return newInstance;
 }
 
@@ -237,7 +244,7 @@ TObjectPtr<AMissile> UObjectFactory::Instantiate(AMissile* origin)
 	{
 		FActorSpawnParameters Params;
 		newInstance = GetWorld()->SpawnActor<AMissile>(origin->GetClass(), origin->GetActorTransform(), Params);
-		if (newInstance == nullptr)
+		if (!IsValid(newInstance))
 			return nullptr;
 
 		newInstance->PrimaryActorTick.bStartWithTickEnabled = false;

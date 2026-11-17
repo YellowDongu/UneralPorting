@@ -34,8 +34,9 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
 
     float distance = ConvertFromVelocity(velocity) * DeltaTime;
     FlyDistance -= distance;
+    FVector position = GetActorLocation();
 
-    SetActorLocation(GetActorLocation() + GetActorForwardVector() * distance);
+    SetActorLocation(position + GetActorForwardVector() * distance);
 
     if (!IsAlive(Owner) || !FCSInfo->IsEmpty())
         return;
@@ -49,7 +50,7 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
         //SetActorRotation(FMath::RInterpTo(CurrentRotation, FRotator(0.0f, CurrentRotation.Yaw, CurrentRotation.Roll), DeltaTime, rotationSpeed));
     }
 
-    FVector vector = Target->GetActorLocation() - GetActorLocation();
+    FVector vector = Target->GetActorLocation() - position;
     float sqrMagnitude = vector.SizeSquared();
     GiveRadarWarn.ExecuteIfBound(sqrMagnitude);
 
@@ -57,7 +58,7 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
     {
         UE_LOG(LogTemp, Log, TEXT("[AStandardMissile::Tick] Collide -> %s"), *Target->GetName());
 
-        GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), GetActorLocation(), 150.0f, 2.0f);
+        GetWorld()->GetSubsystem<UObjectFactory>()->Explosion(GetWorld(), position, 150.0f, 2.0f);
         AVehicleBase* vehicle = Cast<AVehicleBase>(Target.Get());
         if (vehicle != nullptr)
             vehicle->HPDamage(damage);

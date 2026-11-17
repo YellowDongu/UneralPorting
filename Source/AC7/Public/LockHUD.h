@@ -26,6 +26,7 @@ public:
 	void ChangeLockUI(void);
 	void PlayLockSound(float DeltaTime, float maxTime);
 
+	const TArray<TSharedPtr<LockSet>>& GetSpecialIndicator() const { return SpecialIndicators; }
 private:
 	TWeakObjectPtr<class AAircraft> Player{ nullptr };
 	TWeakObjectPtr<class URadar> PlayerRadar{ nullptr };
@@ -52,9 +53,8 @@ private:
 
 	FDelegateHandle AddHandle, RemoveHandle;
 
-	TObjectPtr<class USoundBase> SpecialLock;
+	TObjectPtr<class USoundBase> StandbyLockSound;
 	TSharedPtr<struct FSoundSet> LockSoundSet{ nullptr };
-	UPROPERTY() TObjectPtr<UAudioComponent> LockSoundChannel{ nullptr };
 
 	float LockSoundMin{ 0.05f };
 	float LockSoundMax{ 0.3f };

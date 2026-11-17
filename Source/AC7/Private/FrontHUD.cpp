@@ -24,24 +24,35 @@ void UFrontHUD::BindVehicle(AAircraft* target, APlayerPilot* player)
 	if (target == nullptr) return;
 	bBinded = true;
 	
-	FControl* poineter;
-	target->GetControl(poineter);
-	Velocity = &poineter->Velocity;
+	Velocity = &target->GetControl().Velocity;
 	GetPosition = [target]() -> FVector { return target->GetActorLocation(); };
 	GetRotation = [target]() -> FVector { return target->GetActorRotation().Euler(); };
 	PlayerRadar = target->GetRadar();
 
+	AttitudeIndicator->BindPlayer(target, player);
 	IFFHudController->BindPlayer(target, player);
 	LockHUD->BindPlayer(target, player);
-	AttitudeIndicator->BindPlayer(target, player);
 	RadarUI->BindPlayer(target, player);
 	Status->BindPlayer(target, player);
 
-	USoundSubsystem* sound = GetGameInstance()->GetSubsystem<USoundSubsystem>();
 	SoundSet = MakeShared<FSoundSet>();
-	SoundSet->Sound = sound->GetSound(TEXT("MissileWarn"));
-	SoundSet->Channel = sound->GetChannel(TEXT("MissileWarnChannel"), target->GetWorld());
-	SoundSet->Channel->SetSound(SoundSet->Sound);
+	SoundSet->Initialize(TEXT("MissileWarn"), TEXT("MissileWarnChannel"), GetGameInstance()->GetSubsystem<USoundSubsystem>(), target->GetWorld());
+
+	ShortDuration = SoundSet->Sound->Duration * 3.0f;
+	LongDuration = SoundSet->Sound->Duration * 1.1f;
+
+	SetUIColor.AddUObject(AttitudeIndicator, &UAttitudeIndicator::ChangeColor);
+	SetUIColor.AddUObject(IFFHudController, &UIFFHandler::SetColor);
+	//SetUIColor.AddUObject(LockHUD, &ULockHUD::SetColor);
+	//SetUIColor.AddUObject(RadarUI, &URadarUI::SetColor);
+	SetUIColor.AddUObject(Status, &UStatusUI::SetColor);
+
+	//class UIFFHandler* IFFHudController{ nullptr };
+	//class ULockHUD* LockHUD{ nullptr };
+	//class URadarUI* RadarUI{ nullptr };
+	//class UStatusUI* Status{ nullptr };
+
+	ChangeColor(BaseColor);
 }
 
 void UFrontHUD::NativeConstruct()
@@ -57,10 +68,6 @@ void UFrontHUD::NativeConstruct()
 		};
 
 	WidgetTree->ForEachWidget(BindFunction);
-	SetUIColor.AddUObject(AttitudeIndicator, &UAttitudeIndicator::ChangeColor);
-
-	SetUIColor.Broadcast(BaseColor);
-	SetTextColor.Broadcast(BaseColor);
 }
 
 void UFrontHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -73,11 +80,14 @@ void UFrontHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 	AltitudeIndicatorText->SetText(FText::FromString(GetAltitudeText()));
 	AttitudeIndicator->SetRenderTransformAngle(GetRotation().X);
 
-	if (PlayerRadar->Warning())
-	{
-		float duration = SoundSet->IsPlaying(false) ? SoundSet->Sound->Duration : (PlayerRadar->Alart() ? 0.5f : 0.2f);
-		SoundSet->BlinkSound(duration, InDeltaTime);
-	}
+	if (bWarning)
+		SoundSet->BlinkSound(PlayerRadar->Alart() ? LongDuration : ShortDuration, InDeltaTime);
 	else
 		SoundSet->Stop();
+
+	if (bWarning == PlayerRadar->Warning())
+		return;
+
+	bWarning = PlayerRadar->Warning();
+	ChangeColor(bWarning ? AlartColor : BaseColor);
 }

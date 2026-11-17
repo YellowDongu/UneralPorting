@@ -82,4 +82,10 @@ void UWaypointPathAsset::Load(const FString& ObjectPath, class FWaypointEditorDa
 
     //dataClass->SetData(Asset);
     Asset->SetData(dataClass);
+
+    if (dataClass->Waypoints.IsEmpty())
+        return;
+
+    if (dataClass->DistanceSamples.IsEmpty() || dataClass->DistanceSampleRotations.IsEmpty())\
+        dataClass->OnChanged.Broadcast();
 }

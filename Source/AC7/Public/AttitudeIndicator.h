@@ -41,27 +41,22 @@ public:
 	FGetEularAngle GetEularAngle;
 
 
-	void ChangeColor(FLinearColor color = FLinearColor::Green);
+	void ChangeColor(FLinearColor color);
 
 private:
-	bool bBinded{ false };
-	bool bInitialized{ false };
-	float MaxHeight{ 200.0f };
-	float PitchSpace{ 2.5f };
-	int HalfHeight{ 4 };
-
-	int Pitch{ 0 };
-	float space{ 0.0f };
+	bool bBinded{ false }, bInitialized{ false };
+	float MaxHeight{ 200.0f }, PitchSpace{ 2.5f }, Space{ 0.0f };
+	int HalfHeight{ 4 }, Pitch{ 0 };
 
 	TArray<TPair<TObjectPtr<class UPitchBar>, PitchFlag>> Alive;
 	TArray<TObjectPtr<class UPitchBar>> Pool[4];
 
-	FLinearColor currentColor{ FLinearColor::Green };
+	FLinearColor currentColor{ FLinearColor::White };
 
 	//UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	//class UTextBlock* Text{nullptr};
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
-	class UCanvasPanel* BasePanel;
+	class UCanvasPanel* BasePanel{ nullptr };
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	class UPitchBar* PitchCenter{ nullptr };
 

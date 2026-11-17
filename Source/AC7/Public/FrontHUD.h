@@ -19,10 +19,11 @@ public:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	void BindVehicle(class AAircraft* target, class APlayerPilot* player);
 
-	inline FString GetSpeedText() { return FString::FromInt(static_cast<int32>(ConvertToVelocity(*Velocity))); }
-	inline FString GetAltitudeText() { return FString::FromInt(static_cast<int32>(ConvertToAltitude(GetPosition().Z))); }
+	inline FString GetSpeedText(void) { return FString::FromInt(static_cast<int32>(ConvertToVelocity(*Velocity))); }
+	inline FString GetAltitudeText(void) { return FString::FromInt(static_cast<int32>(ConvertToAltitude(GetPosition().Z))); }
 
-	class URadarUI* GetRadarUI() { return RadarUI; }
+	class URadarUI* GetRadarUI(void) { return RadarUI; }
+	class ULockHUD* GetLockHUD(void) { return LockHUD; }
 
 	void ChangeColor(const FLinearColor& NewColor) { SetUIColor.Broadcast(NewColor); SetTextColor.Broadcast(NewColor); }
 
@@ -32,10 +33,10 @@ public:
 	FSetTextColor SetTextColor;
 
 private:
-	bool bBinded{ false };
-	float* Velocity{ nullptr };
-	FLinearColor HUDColor = FLinearColor::Green;
-	FLinearColor BaseColor = FLinearColor::Green;
+	bool bBinded{ false }, bWarning;
+	const float* Velocity{ nullptr };
+	float ShortDuration{ 0.0f }, LongDuration{ 0.0f };
+
 
 	TFunction<FVector()> GetPosition{};
 	TFunction<FVector()> GetRotation{};

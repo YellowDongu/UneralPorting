@@ -20,10 +20,10 @@ public:
     ADebugSpectator();
     virtual ~ADebugSpectator() = default;
 
-    virtual void BeginPlay() override;
-    virtual void PostInitProperties() override;
-    //virtual void PreInitializeComponents() override;
-    virtual void PostInitializeComponents() override;
+    virtual void BeginPlay(void) override;
+    virtual void PostInitProperties(void) override;
+    //virtual void PreInitializeComponents(void) override;
+    virtual void PostInitializeComponents(void) override;
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 private:

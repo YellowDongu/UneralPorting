@@ -145,11 +145,11 @@ void UIFFHandler::OnTriggerEnter(UPrimitiveComponent* OverlappedComponent, AActo
 		while (!Stored.IsEmpty())
 		{
 			newInstnace = Stored.Pop();
-			if (newInstnace != nullptr)
+			if (IsValid(newInstnace))
 				break;
 		}
 
-		if (newInstnace == nullptr)
+		if (!IsValid(newInstnace))
 		{
 			newInstnace = CreateWidget<UIFFHUD>(GetWorld(), BluePrint);
 			if (newInstnace == nullptr)
@@ -158,8 +158,9 @@ void UIFFHandler::OnTriggerEnter(UPrimitiveComponent* OverlappedComponent, AActo
 			newInstnace->RetriveUI.AddUObject(this, &UIFFHandler::RemoveTarget);
 		}
 
+		
 		UCanvasPanelSlot* CanvasSlot = BaseCanvas->AddChildToCanvas(newInstnace);
-		if (CanvasSlot == nullptr)
+		if (!IsValid(CanvasSlot))
 		{
 			Stored.Add(newInstnace);
 			return;
@@ -173,10 +174,10 @@ void UIFFHandler::OnTriggerEnter(UPrimitiveComponent* OverlappedComponent, AActo
 		CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
 		//CanvasSlot->SetZOrder(10);
 
+		newInstnace->SetVisibility(ESlateVisibility::Visible);
 		newInstnace->StartTrack(vehicle, Player.Get(), CanvasSlot);
 		Alive.Add({ vehicle, newInstnace });
 	}
-
 }
 
 void UIFFHandler::OnTriggerExit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -185,10 +186,13 @@ void UIFFHandler::OnTriggerExit(UPrimitiveComponent* OverlappedComponent, AActor
 
 	if (vehicle != nullptr)
 	{
-
 		TObjectPtr<UIFFHUD>* removeTarget = Alive.Find(vehicle);
 
 		if (removeTarget == nullptr)
+			return;
+		Alive.Remove(vehicle);
+
+		if (!IsValid(*removeTarget))
 			return;
 
 		(*removeTarget)->DeselectTarget();
@@ -197,7 +201,6 @@ void UIFFHandler::OnTriggerExit(UPrimitiveComponent* OverlappedComponent, AActor
 
 		//(*removeTarget)->RemoveFromParent();
 		Stored.Add(*removeTarget);
-		Alive.Remove(vehicle);
 
 		//UE_LOG(LogTemp, Log, TEXT("EndTrack: %s"), *Target->GetName());
 		//InDistance.Remove(vehicle);

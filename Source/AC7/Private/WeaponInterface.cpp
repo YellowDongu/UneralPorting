@@ -5,21 +5,23 @@
 
 UWeaponInterface::UWeaponInterface()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.TickGroup = TG_PrePhysics;
 
-	bAutoRegister = false;
+	bAutoRegister = true;
 	bWantsInitializeComponent = false;
 	bAutoActivate = false;
 
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-
 void UWeaponInterface::Update(float DeltaTime)
 {
+	bEnemySpotted = !currentTargets.IsEmpty() && IsAlive(currentTargets[0].Target);
+
+	UpdateEvent.Broadcast(DeltaTime);
+	/*
 	bulletTime = FMath::Min(bulletTime + DeltaTime, GunRPM);
 
 	if (currentTargets.IsEmpty() || !IsAlive(currentTargets[0].Target))
@@ -48,21 +50,28 @@ void UWeaponInterface::Update(float DeltaTime)
 		currentTargets[0].Lock = FMath::Clamp(currentTargets[0].Lock - DeltaTime, 0.0f, 1.0f);
 	else
 		currentTargets[0].Lock = FMath::Clamp(currentTargets[0].Lock + DeltaTime, 0.0f, 1.0f);
+		*/
 }
 
 void UWeaponInterface::SystemIntegration(TWeakObjectPtr<class URadar> radar, USceneComponent* WeaponContainer, const FBoxSphereBounds& bodyBoundary)
 {
-	BodyMesh = Cast<USkeletalMeshComponent>(GetOwner()->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), TEXT("Body"))[0]);
-	//BodyMesh = Cast<USkeletalMeshComponent>(GetOwner()->GetRootComponent());
+	auto list = GetOwner()->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), TEXT("Body"));
+	if (list.IsEmpty() || !IsValid(list[0]))
+		return;
+
+	BodyMesh = StaticCast<USkeletalMeshComponent*>(list[0]); // Cast<USkeletalMeshComponent>(GetOwner()->GetRootComponent());
 	UVehicleAnimation* Animation = Cast<UVehicleAnimation>(BodyMesh->GetAnimInstance());
-	check(Animation);
+
+	if (!IsValid(Animation))
+		return;
 
 	Range = Range * Range;
+	AngleCos = FMath::Cos(FMath::DegreesToRadians(2.5));
 	TurretYaw = Animation->GetTurretYaw();
 	TurretPitch = Animation->GetTurretPitch();
 
 	int BoneIndex = BodyMesh->GetBoneIndex(TurretBone);
-	if (BoneIndex == -1) check(nullptr);
+	if (BoneIndex == -1) return;
 
 	FTransform turretTransform = BodyMesh->GetBoneTransform(BoneIndex);
 	//FTransform WorldTransform = BodyMesh->GetBoneTransform(BoneIndex, BodyMesh->GetComponentTransform());
@@ -80,6 +89,49 @@ void UWeaponInterface::SystemIntegration(TWeakObjectPtr<class URadar> radar, USc
 
 	Super::SystemIntegration(radar, WeaponContainer, MeshBoundary);
 
+	UpdateEvent.AddUObject(this, &UWeaponInterface::TurretSet);
+
+	if (bGunEnable)
+		UpdateEvent.AddUObject(this, &UWeaponInterface::TrackGun);
 	if (!standard.IsEmpty())
-		standardCos = standard[0]->GetLockAngle();
+		UpdateEvent.AddUObject(this, &UWeaponInterface::TrackMissile);
+}
+
+void UWeaponInterface::TrackGun(float DeltaTime) { bulletTime = FMath::Min(bulletTime + DeltaTime, GunRPM); }
+
+void UWeaponInterface::TrackMissile(float DeltaTime)
+{
+	if (bEnemySpotted)
+		standard[0]->Lock(currentTargets[0], DeltaTime, GetOwner()->GetActorForwardVector(), GetOwner()->GetActorLocation());
+}
+
+void UWeaponInterface::TurretSet(float DeltaTime)
+{
+	if (bEnemySpotted)
+	{
+		FVector direction = currentTargets[0].Target->GetActorLocation() - GetOwner()->GetActorLocation();
+		FRotator rotator = direction.Rotation();
+		if (bGunEnable)
+			TargetAngleCos = FVector::DotProduct(direction.GetSafeNormal(), GetOwner()->GetActorForwardVector());
+
+		TargetYaw = FMath::UnwindDegrees(FMath::UnwindDegrees(rotator.Yaw) - FMath::UnwindDegrees(*TurretYaw));
+		TargetPitch = FMath::UnwindDegrees(FMath::UnwindDegrees(rotator.Pitch) - FMath::UnwindDegrees(*TurretPitch));
+
+		//YawDelta = FMath::Sign(TargetYaw) * DeltaTime * TurretYawRotateSpeed;
+		//PitchDelta = FMath::Sign(TargetPitch) * DeltaTime * TurretPitchRotateSpeed;
+	}
+	else
+	{
+		TargetYaw = FMath::UnwindDegrees(-*TurretYaw);
+		TargetPitch = FMath::UnwindDegrees(-*TurretPitch);
+
+		//YawDelta = FMath::Sign(FMath::UnwindDegrees(-*TurretYaw)) * DeltaTime * TurretYawRotateSpeed;
+		//PitchDelta = FMath::Sign(FMath::UnwindDegrees(-*TurretPitch)) * DeltaTime * TurretPitchRotateSpeed;
+	}
+
+	YawDelta = (FMath::Abs(TargetYaw) <= TurretYawRotateSpeed ? TargetYaw : FMath::Sign(TargetYaw) * TurretYawRotateSpeed) * DeltaTime;
+	PitchDelta = (FMath::Abs(TargetPitch) <= TurretPitchRotateSpeed ? TargetPitch : FMath::Sign(TargetPitch) * TurretPitchRotateSpeed) * DeltaTime;
+
+	*TurretYaw += YawDelta;
+	*TurretPitch += PitchDelta;
 }

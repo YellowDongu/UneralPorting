@@ -3,6 +3,8 @@
 
 #include "BluePrintCollector.h"
 
+#include "Async/Async.h"
+#include "Tasks/Task.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -45,12 +47,14 @@ void UBluePrintCollector::PostInitProperties()
 
 	for (auto& item : Levels)
 	{
+		if (!item) continue;
 		FLevelInfo levelInfo(item);
 		LevelInfomation.Add(levelInfo.LevelName, levelInfo);
 	}
 
 	for (auto& item : Vehicles)
 	{
+		if(!item) continue;
 		FVehicleInfo vehicleInfo(item);
 		VehicleInfomation.Add(vehicleInfo.VehicleID, vehicleInfo);
 	}
@@ -94,7 +98,7 @@ TWeakObjectPtr<ABullet> UBluePrintCollector::CreateBullet(UWorld* world) { retur
 
 TObjectPtr<class UNiagaraSystem> UBluePrintCollector::CreateExplosionSystem()
 {
-	return ExplosionBluePrint;
+	return ExplosionBluePrint; /// ????
 	//FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
 	//return Cast<UNiagaraSystem>(Streamable.LoadSynchronous(FSoftObjectPath(ExplosionBluePrint)));
 }
@@ -118,4 +122,67 @@ USoundBase* UBluePrintCollector::GetSound(const FString& name)
 		return nullptr;
 
 	return UAssetManager::GetStreamableManager().LoadSynchronous(*pointer);
+}
+
+void UBluePrintCollector::GetManeuverData(const FString& name, TArray<FWaypointData>& output)
+{
+	output.Reset();
+
+	const TSoftObjectPtr<class UMovementPathAsset>* asset = ManeuverAssets.Find(name);
+	if (asset == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[UBluePrintCollector::GetManeuverData] Asset Not Found : %s"), *name);
+		return;
+	}
+
+	UMovementPathAsset* loadedAsset{ nullptr };
+	TArray<TArray<FWaypointData>>& pool = LoadedManeuverData.FindOrAdd(name);
+
+	if (pool.IsEmpty())
+	{
+		loadedAsset = UAssetManager::GetStreamableManager().LoadSynchronous(*asset);
+		if (!IsValid(loadedAsset))
+		{
+			UE_LOG(LogTemp, Error, TEXT("[UBluePrintCollector::GetManeuverData] Asset Not Loaded : %s"), *name);
+			return;
+		}
+
+		output = loadedAsset->GetSavedPoints();
+	}
+	else
+		output = pool.Pop(false);
+
+	if (pool.Num() < 3)
+	{
+		if (!IsValid(loadedAsset))
+		{
+			loadedAsset = UAssetManager::GetStreamableManager().LoadSynchronous(*asset);
+			if (!IsValid(loadedAsset))
+			{
+				UE_LOG(LogTemp, Error, TEXT("[UBluePrintCollector::GetManeuverData] Asset Not Loaded : %s"), *name);
+				return;
+			}
+		}
+
+		loadedAsset->AddToRoot();
+		UE::Tasks::Launch(TEXT("UBluePrintCollector::GetManeuverData"),
+						  [weakThis = TWeakObjectPtr<UBluePrintCollector>(this), name, loadedAsset]() mutable -> void
+						  {
+							  constexpr int FillCount = 5;
+							  TArray<TArray<FWaypointData>> copyList;
+							  TArray<FWaypointData> source = loadedAsset->GetSavedPoints();
+
+							  loadedAsset->RemoveFromRoot();
+							  copyList.Reserve(FillCount);
+
+							  for (int i = 0; i < FillCount; ++i)
+								  copyList.Add(source);
+								
+							  AsyncTask(ENamedThreads::GameThread, [weakThis, name, copies = MoveTemp(copyList)]() mutable -> void
+										{
+											if (weakThis.IsValid())
+												weakThis->LoadedManeuverData.FindOrAdd(name).Append(MoveTemp(copies));
+										});
+						  });
+	}
 }

@@ -2,11 +2,13 @@
 
 
 #include "MovementPathAsset.h"
+
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/AssetManager.h"
-#include "FileHelpers.h"
+
 #include "GameMaster.h"
 #include "BluePrintCollector.h"
+
 
 UMovementPathAsset* UMovementPathAsset::GetOrCreateAsset(const FString& PackageName)
 {
@@ -27,12 +29,24 @@ UMovementPathAsset* UMovementPathAsset::Load(const FString& ObjectPath)   // ¿¹:
     return LoadObject<UMovementPathAsset>(nullptr, *ObjectPath);
 }
 
+bool UMovementPathAsset::Load(UWorld& world, const FString& name, TArray<FWaypointData>& output)
+{
+    output.Empty();
+
+    UE_LOG(LogTemp, Error, TEXT("[UMovementPathAsset::Load] Load Asset : %s"), *name);
+    UBluePrintCollector* collector = world.GetGameInstance<UGameMaster>()->GetCollector();
+    check(collector);
+
+    collector->GetManeuverData(name, output);
+    return true;
+}
 
 UMovementPathAsset* UMovementPathAsset::Load(UWorld& world, const FString& name)
 {
     UE_LOG(LogTemp, Error, TEXT("[UMovementPathAsset::Load] Load Asset : %s"), *name);
     UBluePrintCollector* collector = world.GetGameInstance<UGameMaster>()->GetCollector();
     check(collector);
+
 
     const TSoftObjectPtr<class UMovementPathAsset>* asset = collector->GetManeuverAsset(name);
     if (asset == nullptr)

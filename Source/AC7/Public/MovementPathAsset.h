@@ -20,32 +20,10 @@ public:
     friend class FWaypointEditorData;
     static UMovementPathAsset* GetOrCreateAsset(const FString& PackageName);
     static UMovementPathAsset* Load(const FString& ObjectPath);
-    static inline bool Load(UWorld& world, const FString& name, TArray<FWaypointData>& output)
-    {
-        output.Empty();
-        UMovementPathAsset* loadedAsset = Load(world, name);
+    static bool Load(UWorld& world, const FString& name, TArray<FWaypointData>& output);
 
-        if (loadedAsset == nullptr)
-            return false;
-
-        output = MoveTemp(loadedAsset->SavedPoints);
-        return true;
-        //return S_OK;
-    }
-    static inline bool Load(UWorld& world, const FString& name, TArray<FWaypointData>& waypointSlot, TArray<FWaypointData>& waypointNodeSlot)
-    {
-        waypointSlot.Empty();
-        waypointNodeSlot.Empty();
-        UMovementPathAsset* loadedAsset = Load(world, name);
-
-        if (loadedAsset == nullptr)
-            return false;
-
-        waypointSlot = MoveTemp(loadedAsset->SavedPoints);
-        waypointNodeSlot = MoveTemp(loadedAsset->SavedWaypoints);
-        return true;
-        //return S_OK;
-    }
+    const TArray<FWaypointData>& GetSavedPoints(void) { return SavedPoints; }
+    const TArray<FWaypointData>& GetWaypoints(void) { return SavedWaypoints; }
 
 protected:
     static UMovementPathAsset* Load(UWorld& world, const FString& name);

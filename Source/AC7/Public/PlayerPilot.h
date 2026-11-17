@@ -51,8 +51,6 @@ public:
 	virtual void SetupInputComponent(void) override;
 	virtual void Tick(float DeltaTime) override;
 
-	void CheatEndMission();
-
 	void Attach(class AAircraft* aircraft);
 	void Detach(void);
 	void LinkHUD(void);
@@ -76,7 +74,7 @@ private:
 
 	TWeakObjectPtr<UAudioComponent> GunChannel;
 	TObjectPtr<class USoundBase> ShootSound, SpecialShootSound;
-	TSharedPtr<struct FSoundSet> GunSoundSet;
+	TSharedPtr<struct FSoundSet> GunSoundSet, EngineSoundSet;
 
 	//UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Camera")
 	//TSubclassOf<class UCameraShakeBase> ExplosionShake;

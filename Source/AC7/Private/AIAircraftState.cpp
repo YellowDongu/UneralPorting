@@ -70,6 +70,8 @@ bool AIAircraftState::Start(const TSharedPtr<DataSetterBlock>& data)
 
 void AIAircraftState::SetDefaultData(DefaultDataBlock* data)
 {
+    Release();
+
     AircraftDefaultData* detailData = static_cast<AircraftDefaultData*>(data);
     Owner = detailData->Owner;
     if (Owner == nullptr)
@@ -145,7 +147,7 @@ void AIAircraftState::ShallowTurn(FRotator& aircraftRotation, float yaw, float p
     Control->Yoke.X = ClampRange(((yaw > 0.0f ? bankAngle : -bankAngle) - aircraftRotation.Roll) / 10.0f);
     //Control->Yoke.Y = (FMath::Abs(Control->Yoke.X) < 0.1f) ? ClampRange(yaw) : 0.0f;
     Control->Yoke.Y = ClampRange(yaw);
-    Control->Yoke.Z = ClampRange((FMath::Clamp(pitch, 5.0f, -5.0f) - aircraftRotation.Pitch) / 10.0f);
+    Control->Yoke.Z = ClampRange((FMath::Clamp(pitch, -5.0f, 5.0f) - aircraftRotation.Pitch) / 10.0f);
 
     Control->Throttle = 0.2f;
     if (Control->Velocity > 550.0f)
@@ -292,18 +294,23 @@ bool AIAircraftState::CogitateCombat()
     TWeakObjectPtr<class AVehicleBase> closestTarget;
     double savedDistance = TNumericLimits<double>::Max();
     FVector location = Owner->GetActorLocation();
-    
+
     for (const auto& item : list)
     {
         if (!IsAlive(item)) continue;
         double squaredDistance = (item->GetActorLocation() - location).SquaredLength();
 
+        if (squaredDistance > RangeLengthSquare)
+            continue;
         if (savedDistance <= squaredDistance)
             continue;
 
         closestTarget = item;
         savedDistance = squaredDistance;
     }
+
+    if (!IsAlive(closestTarget))
+        return false;
 
     TSharedPtr<CombatState::CombatStateDefaultData> newData = MakeShared<CombatState::CombatStateDefaultData>();
     newData->SelectedTarget = closestTarget;
@@ -461,7 +468,7 @@ void SearchState::StartSearch()
     if (!Radar->GetTargets().IsEmpty())
         return;
 
-    TArray<TWeakObjectPtr<AVehicleBase>> targetArray;
+    TArray<TPair<FVector, TWeakObjectPtr<AVehicleBase>>> targetArray;
     targetArray.Reserve(100);
 
     int teamIndex = Owner->GetTeam();
@@ -469,31 +476,31 @@ void SearchState::StartSearch()
     {
         if (teamIndex == (*Iterator)->GetTeam())
             continue;
+        if (!IsAlive(*Iterator))
+            continue;
 
-        targetArray.Add(*Iterator);
+        targetArray.Add({ (*Iterator)->GetActorLocation(), *Iterator });
     }
 
-    TaskHandle = UE::Tasks::Launch(*FString(TEXT("AISearchTask::") + Owner->GetName()), [this, targetArray]()
+    SelectedTarget.Reset();
+
+    TaskHandle = UE::Tasks::Launch(*FString(TEXT("AISearchTask::") + Owner->GetName()), [position = Owner->GetActorLocation(), result = &SelectedTarget, targetArray]() mutable
                                    {
-                                       SelectedTarget.Reset();
                                        double minDistance = TNumericLimits<double>::Max();
                                        TWeakObjectPtr<AVehicleBase> selected;
                                        int length = targetArray.Num();
 
                                        for (int i = 0; i < length; i++)
                                        {
-                                           if (!IsAlive(targetArray[i]))
-                                               continue;
-
-                                           double distance = (targetArray[i]->GetActorLocation() - Owner->GetActorLocation()).SizeSquared();
+                                           double distance = (targetArray[i].Key - position).SizeSquared();
                                            if (minDistance > distance)
                                            {
                                                minDistance = distance;
-                                               selected = targetArray[i];
+                                               selected = targetArray[i].Value;
                                            }
                                        }
 
-                                       SelectedTarget = selected;
+                                       *result = selected;
                                    });
     LOG(TEXT("[SearchState::StartSearch] Searching : %s"), *Owner->GetFName().ToString());
 }
@@ -540,6 +547,9 @@ bool SearchState::SearchInRadar()
 bool ChaseState::Start(const TSharedPtr<DataSetterBlock>& data)
 {
     if (!AIAircraftState::Start(data))
+        return false;
+
+    if (!data.IsValid())
         return false;
 
     ChaseStateDefaultData* detailData = static_cast<ChaseStateDefaultData*>(data.Get());
@@ -616,6 +626,9 @@ void ChaseState::ChangeToCombat()
 bool CombatState::Start(const TSharedPtr<DataSetterBlock>& data)
 {
     if (!AIAircraftState::Start(data))
+        return false;
+
+    if (!data.IsValid())
         return false;
 
     CombatStateDefaultData* detailData = static_cast<CombatStateDefaultData*>(data.Get());
@@ -772,6 +785,9 @@ bool AltitudeSetterState::Start(const TSharedPtr<DataSetterBlock>& data)
     if (!AIAircraftState::Start(data))
         return false;
 
+    if (!data.IsValid())
+        return false;
+
     AltitudeSetterData* detailData = static_cast<AltitudeSetterData*>(data.Get());
     TargetAltitude = detailData->TargetAltitude;
     DataToSend = detailData->PreviousData;
@@ -799,16 +815,19 @@ bool DefendState::Update()
         {
             Phase++;
             InitializeData();
-            Control->Throttle = 0.5f;
+            UE_LOG(LogTemp, Error, TEXT("[DefendState::Update] InitialRotation : %.3f, %.3f, %.3f"), InitialRotation.Pitch, InitialRotation.Roll, InitialRotation.Yaw);
         }
         break;
     case 1:
         SetAttitude(InitialRotation.Pitch, InitialRotation.Roll, InitialRotation.Yaw);
 
-        Control->Throttle = 0.5f;
-        Timer -= DeltaTime;
-
-        if (CollisionCheck == 0)
+        if (!Owner->GetFlightMovement()->IsFollowingWayPoint())
+        {
+            UE_LOG(LogTemp, Error, TEXT("[DefendState::Update] OutOfTime"));
+            Phase++;
+            break;
+        }
+        else if (CollisionCheck == 0)
         {
             CollisionCheck = CheckWayCollision();
 
@@ -816,27 +835,40 @@ bool DefendState::Update()
                 Phase = -1;
             else if (CollisionCheck == 1)
                 Phase++;
+            /*
+            {
+                FVector direction = WaypointData[0].Position - Owner->GetActorLocation();
+                float Angle = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Owner->GetActorForwardVector().Dot(direction.GetSafeNormal()), -1.0f, 1.0f)));
+                UE_LOG(LogTemp, Error, TEXT("[DefendState::Update] %s -> %s/ %s, distance = %.3f, angle = %.3f"), *Owner->GetActorLocation().ToString(), *WaypointData[0].Position.ToString(), *direction.ToString(), direction.Size(), Angle);
+            }
+            */
+
         }
         break;
     case 2:
+        /*
+    {
+        FVector direction = WaypointData[0].Position - Owner->GetActorLocation();
+        float Angle = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Owner->GetActorForwardVector().Dot(direction.GetSafeNormal()), -1.0f, 1.0f)));
+        UE_LOG(LogTemp, Error, TEXT("[DefendState::Update] %s -> %s/ %s, distance = %.3f, angle = %.3f"), *Owner->GetActorLocation().ToString(), *WaypointData[0].Position.ToString(), *direction.ToString(), direction.Size(), Angle);
+    }
+        */
         Control->Yoke = FVector3f::ZeroVector;
-        Control->Throttle = 0.5f;
-        Timer -= DeltaTime;
-        if (Timer <= 0.0f)
-            Phase++;
-        break;
-    case 3:
+    Owner->GetFlightMovement()->ClearWayPoint();
         Owner->GetFlightMovement()->SetWayPoint(WaypointData, false);
         WaypointData.Reset();
+        Timer = DelayTime;
         Phase++;
         break;
-    case 4:
+    case 3:
+        Control->Yoke = FVector3f::ZeroVector;
         if (!Owner->GetFlightMovement()->IsFollowingWayPoint())
             Phase++;
         break;
     default:
         Timer -= DeltaTime;
 
+        Control->Yoke = FVector3f::ZeroVector;
         double altitude = Owner->GetActorLocation().Z;
 		bool overMin = MinimumAltitude >= altitude;
         bool overMax = MaximumAltitude <= altitude;
@@ -883,7 +915,7 @@ bool DefendState::Update()
 
 bool DefendState::Start(const TSharedPtr<DataSetterBlock>& data)
 {
-    if (data == nullptr)
+    if (!data.IsValid())
     {
         LOG(TEXT("[DefendState::Start] Override Failed"));
         return false;
@@ -909,7 +941,7 @@ bool DefendState::Start(const TSharedPtr<DataSetterBlock>& data)
     return true;
 }
 
-void DefendState::Initiate()
+void DefendState::Initiate() // deprecated
 {
     double altitudeDifference = AltitudeMiddleValue - Owner->GetActorLocation().Z;
     Random = FMath::RandRange(-1.0, 1.0);
@@ -951,7 +983,7 @@ bool ManeuverState::Update()
         {
             Phase++;
             InitializeData();
-            Control->Throttle = 0.2f;
+            UE_LOG(LogTemp, Error, TEXT("[ManeuverState::Update] InitialRotation : %.3f, %.3f, %.3f"), InitialRotation.Pitch, InitialRotation.Roll, InitialRotation.Yaw);
         }
         break;
     }
@@ -959,6 +991,12 @@ bool ManeuverState::Update()
         SetAttitude(InitialRotation.Pitch, InitialRotation.Roll, InitialRotation.Yaw);
 
         Timer -= DeltaTime;
+        if (Timer <= 0.0f)
+        {
+            UE_LOG(LogTemp, Error, TEXT("[ManeuverState::Update] OutOfTime"));
+            Phase++;
+            break;
+        }
 
         if (CollisionCheck == 0)
         {
@@ -971,22 +1009,25 @@ bool ManeuverState::Update()
         }
         break;
     case 2:
-        Timer -= DeltaTime;
-        if (Timer <= 0.0f)
-            Phase++;
-        break;
-    case 3:
+        Control->Yoke = FVector3f::ZeroVector;
+        Owner->GetFlightMovement()->ClearWayPoint();
         Owner->GetFlightMovement()->SetWayPoint(WaypointData, false);
         WaypointData.Reset();
         Phase++;
         break;
-    case 4:
+    case 3:
+        Control->Yoke = FVector3f::ZeroVector;
         if (!Owner->GetFlightMovement()->IsFollowingWayPoint())
             Phase++;
         break;
     default:
-        CogitateCombat();
         Control->Yoke = FVector3f::ZeroVector;
+        if (CogitateCombat())
+            return true;
+        if (CogitateInFormation())
+            return true;
+
+        NextState = State::Search;
         return true;
     }
 
@@ -1000,23 +1041,19 @@ bool ManeuverState::Start(const TSharedPtr<DataSetterBlock>& data)
 
     TArray<FWaypointData> waypoint;
     UWorld* world = Owner->GetWorld();
-    FString manuverName;
+    FString manuverName = TEXT("VerticalTurn"); // default
 
     if (data.IsValid())
     {
         ManeuverData* stateData = StaticCast<ManeuverData*>(data.Get());
 
-        if (stateData == nullptr)
-            manuverName = TEXT("VerticalTurn"); // default
-        else
+        if (stateData != nullptr)
             manuverName = stateData->ManeuverName;
     }
     else if(!AviliableManeuver.IsEmpty())
         manuverName = AviliableManeuver[FMath::RandRange(1, AviliableManeuver.Num()) - 1];
-    else
-        manuverName = TEXT("VerticalTurn"); // default
 
-    UMovementPathAsset::Load(*world, manuverName, WaypointData);
+    UMovementPathAsset::Load(*world, manuverName, WaypointData); // 디버깅을 위한 트래킹 이정표 -> f12
 
     if (WaypointData.IsEmpty())
     {
@@ -1024,7 +1061,6 @@ bool ManeuverState::Start(const TSharedPtr<DataSetterBlock>& data)
         return false;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("[ManeuverState::Start] Waypoint Num = : %d"), WaypointData.Num());
     CollisionCheck = Phase = 0;
     FRotator currentRotator = Owner->GetActorRotation();
     currentRotator.Roll = currentRotator.Pitch = 0.0f;
@@ -1052,7 +1088,7 @@ int ManeuverState::CheckWayCollision(void)
             {
                 Err(TEXT("[ManeuverState::CheckWayCollision] OutOverlaps -> Check skipped due to test"));
                 for (auto& item : overlapData.OutOverlaps)
-                    Err(TEXT("[ManeuverState::CheckWayCollision] OutOverlaps : %s"), *item.GetActor()->GetName());
+                    Err(TEXT("[ManeuverState::CheckWayCollision] OutOverlaps : %s"), *item.GetActor()->GetActorLabel());
 
                 HandleList.Pop();
             }
@@ -1100,20 +1136,29 @@ bool ManeuverState::InitializeData(void)
         return false;
 
     CollisionCheck = -2;
-    Timer = 1.0f;
     HandleList.SetNum(0, false);
     FRotator currentRotator = Owner->GetActorRotation();
     currentRotator.Pitch = currentRotator.Roll = 0.0f;
     FQuat yawQuaternion = currentRotator.Quaternion();
-
-    InitialPosition = Owner->GetActorLocation() + Owner->GetActorForwardVector() * ConvertFromVelocity(Control->Velocity) * Timer;
+    
+    InitialPosition = Owner->GetActorLocation() + Owner->GetActorForwardVector() * ConvertFromVelocity(Control->Velocity) * IdleTimer;
     InitialRotation = FRotator(yawQuaternion * WaypointData[0].Rotation);
+
+    /*{
+        FVector direction = InitialPosition - Owner->GetActorLocation();
+        float Angle = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(Owner->GetActorForwardVector().Dot(direction.GetSafeNormal()), -1.0f, 1.0f)));
+        UE_LOG(LogTemp, Error, TEXT("[ManeuverState::InitializeData] %s -> %s/ %s, distance = %.3f, angle = %.3f"), *Owner->GetActorLocation().ToString(), *InitialPosition.ToString(), *direction.ToString(), direction.Size(), Angle);
+    }*/
+
     Control->Throttle = 0.2f;
+    Timer = IdleTimer;
+    Control->Yoke = FVector3f::ZeroVector;
+    Owner->GetFlightMovement()->InjectWayPoint(FWaypointData(InitialPosition, InitialRotation.Quaternion(), 0.0));
 
     FString taskName = TEXT("[ManeuverState::InitializeData]") + Owner->GetName();
     double LaunchTime = FPlatformTime::Seconds();
-
-    Handle = UE::Tasks::Launch(*taskName, [this, waypointList = MoveTemp(WaypointData), yawQuaternion, LaunchTime]() mutable -> void
+    TWeakObjectPtr<AVehicleBase> subject = Owner;
+    Handle = UE::Tasks::Launch(*taskName, [this, subject, waypointList = MoveTemp(WaypointData), yawQuaternion, LaunchTime]() mutable -> void
                                {
                                    double StartTime = FPlatformTime::Seconds();
                                    LOG(TEXT("[ManeuverState::InitializeData] StartThread / Wait Time : %.3f ms / Num : %d"), (StartTime - LaunchTime) * 1000.0, waypointList.Num());
@@ -1124,20 +1169,18 @@ bool ManeuverState::InitializeData(void)
                                        item.Rotation = yawQuaternion * item.Rotation;
                                    }
 
-                                   AsyncTask(ENamedThreads::GameThread, [this, waypoints = MoveTemp(waypointList)]() mutable -> void
+                                   AsyncTask(ENamedThreads::GameThread, [this, subject, waypoints = MoveTemp(waypointList)]() mutable -> void
                                              {
-                                                 if (!IsAlive(Owner)) { CollisionCheck = -1; return; }
-
                                                  FCollisionQueryParams Params;
                                                  FCollisionResponseParams ResponseParams;
                                                  int jump = 1;
                                                  UWorld* world = Owner->GetWorld();
-                                                 if (world == nullptr) { CollisionCheck = -1; return; }
+                                                 if (!IsAlive(Owner) || world == nullptr) { CollisionCheck = -1; return; }
+                                                 LOG(TEXT("[ManeuverState::InitializeData] EndThread / Num : %d"), WaypointData.Num());
 
                                                  CollisionCheck = 0;
                                                  WaypointData = MoveTemp(waypoints);
-                                                 
-                                                 LOG(TEXT("[ManeuverState::InitializeData] EndThread / Num : %d"), WaypointData.Num());
+
 
                                                  if (WaypointData.Num() > 1)
                                                      jump = FMath::Max(1, FMath::FloorToInt(Radius / (WaypointData[0].Position - WaypointData[1].Position).Length()));

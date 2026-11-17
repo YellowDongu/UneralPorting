@@ -94,7 +94,7 @@ public:
 	void BindPlayer(class AAircraft* vehicle, class APlayerPilot* player);
 	void MissileFired(const TArray<int>& list, bool isSpecial);
 	void ChangeGauge(bool isSpecial);
-
+	void SetColor(FLinearColor NewColor) { /*변하게 할 지 말지 고민중*/ }
 private:
 	FGauge HPGauge;
 	FGaugeSet StandardMissileGauge;

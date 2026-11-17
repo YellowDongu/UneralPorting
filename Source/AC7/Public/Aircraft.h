@@ -38,16 +38,20 @@ public:
 	// 카메라를 기체서 붙이고 그 결과를 컨트롤러에게 넘겨주는 형식, 이 녀석이 없어졌을 때 떼서 쓸 수 있는지 확인해봐야됨
 	virtual void AttachCamera(TWeakObjectPtr<class UCameraComponent>& camera, bool thirdView = true) override;
 
+	virtual void SetMoveable(bool active) override;
+
 	//FireControlSystem
-	inline void ChangeTarget();
+	inline void ChangeTarget(void);
 	inline bool ShootMissile(TArray<int>& output);
-	inline bool ChangeMissile();
-	inline bool ShootMissile();
-	inline bool ShootGun();
+	inline bool ChangeMissile(void);
+	inline bool ShootMissile(void);
+	inline bool ShootGun(void);
 	inline void SetTarget(const TWeakObjectPtr<class AVehicleBase>& target);
-	inline const TArray<FTargetInfo>& GetSelectedTargets() const;
-	inline bool GetSelectSpecial() const;
-	inline int GetSpecial() const;
+
+	inline const TArray<FTargetInfo>& GetSelectedTargets(void) const;
+	inline bool GetSelectSpecial(void) const;
+	inline int GetSpecial(void) const;
+
 	//Radar
 	inline void StartDeployFlare();
 	inline float GetRaderDistance() const;
@@ -71,8 +75,6 @@ protected:
 	FControl Control{};
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AircraftSpec", meta = (AllowPrivateAccess = "true"))
 	FAircraftSpec SPEC;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AircraftSpec", meta = (AllowPrivateAccess = "true"))
-	bool bReadyBlueprint{ false };
 	bool bSpringArmInitialized{ false }, bSystemIntegrated{ false };
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CameraSetting", meta = (AllowPrivateAccess = "true"))

@@ -24,6 +24,7 @@ public:
 	virtual bool Start(const TSharedPtr<DataSetterBlock>& data = nullptr) { NextState = State::END; return SquadData != nullptr && Owner != nullptr && Radar != nullptr; }
 	virtual void SetDefaultData(DefaultDataBlock* data) override;
 
+	virtual void Release(void) override { SquadData = nullptr; Owner.Reset(); Radar.Reset(); }
 
 	//virtual void SetOverrideData(TSharedPtr<DataSetterBlock>& data) = 0;
 
@@ -58,7 +59,8 @@ public:
 		TWeakObjectPtr<class AVehicleBase> SelectedTarget;
 	};
 
-	virtual bool Update() override;
+	virtual void Release(void) override;
+	virtual bool Update(void) override;
 	virtual bool Start(const TSharedPtr<DataSetterBlock>& data = nullptr) override;
 	virtual void SetDefaultData(DefaultDataBlock* data) override;
 	//virtual void SetOverrideData(TSharedPtr<DataSetterBlock>& data) override;

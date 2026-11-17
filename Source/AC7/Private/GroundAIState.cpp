@@ -15,6 +15,8 @@ GroundAIState::~GroundAIState()
 
 void GroundAIState::SetDefaultData(DefaultDataBlock* data)
 {
+    Release();
+
     AircraftDefaultData* detailData = static_cast<AircraftDefaultData*>(data);
     SquadData = detailData->SquadData;
     Owner = detailData->Owner;
@@ -110,14 +112,18 @@ void AttackState::SetDefaultData(DefaultDataBlock* data)
 {
     GroundAIState::SetDefaultData(data);
 
-    if (Owner == nullptr)
-        return;
-
     FCS = Owner->GetFireControlSystem();
-    GunRange = GunRange * GunRange;
+    UWeaponInterface* fcs = Cast<UWeaponInterface>(FCS);
+
+    if (!IsValid(fcs))
+    {
+        Release();
+        return;
+    }
+
+    //GunRange = GunRange * GunRange;
     FCS->GetCurrentTargets(Targets);
 
-    UWeaponInterface* fcs = Cast<UWeaponInterface>(FCS);
     TargetYaw = &fcs->GetTargetYaw();
     TargetPitch = &fcs->GetTargetPitch();
     TurretYaw = &fcs->GetTurretYaw();
@@ -125,6 +131,7 @@ void AttackState::SetDefaultData(DefaultDataBlock* data)
     
     MaxRange = Owner->GetRadar()->GetRaderDistance();
     MaxRange = MaxRange * MaxRange;
+
     if (fcs->CanShootGun())
         HandleWeapon.AddRaw(this, &AttackState::ShootGun);
     
@@ -132,10 +139,17 @@ void AttackState::SetDefaultData(DefaultDataBlock* data)
         HandleWeapon.AddRaw(this, &AttackState::ShootMissile);
 }
     
+void AttackState::Release(void)
+{
+    GroundAIState::Release();
+    HandleWeapon.Clear();
+    FCS.Reset();
+}
+
 bool AttackState::Update()
 {
     static const double lockAngle = FMath::Cos(FMath::DegreesToRadians(2.5));
-    if (Targets->IsEmpty() || !Target->Target.IsValid())
+    if (Targets->IsEmpty() || !IsAlive(Target->Target))
     {
         NextState = State::Search;
         //LOG(TEXT("[CombatState::Update] %s !Target.IsValid"), *Owner->GetName());

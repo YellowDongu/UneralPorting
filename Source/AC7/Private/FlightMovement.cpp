@@ -49,7 +49,7 @@ void UFlightMovement::CalculateVelocity(float deltaTime)
 	float rotationFactor = 1.0f;
 
 	float throttleInput = FMath::Max<float>(0.0f, Control->Throttle - 0.2f);
-	float thrust = enginePower * throttleInput + IdleSpeed;
+	float thrust = EnginePower * throttleInput + IdleSpeed;
 
 	float speedRatio = (Control->Velocity - IdleSpeed) / (NonExceedSpeed - IdleSpeed);
 	float drag = thrust * speedRatio * speedRatio * FMath::Sign(speedRatio) + IdleSpeed;
@@ -58,7 +58,7 @@ void UFlightMovement::CalculateVelocity(float deltaTime)
 	drag *= rotationFactor;
 
 	if (Control->isAirBrakeOn)
-		drag *= airbrakePower;
+		drag *= AirbrakePower;
 
 	Control->Velocity = FMath::Max<float>(100.0f, Control->Velocity + (thrust - drag) * deltaTime * 0.5f);
 }
@@ -71,7 +71,7 @@ float UFlightMovement::CalculateThrottleForTargetVelocity(float targetVelocity)
 	float speedRatio = (targetVelocity - IdleSpeed) / (NonExceedSpeed - IdleSpeed);
 	float k = speedRatio * speedRatio * FMath::Sign(speedRatio);
 
-	float denom = (1.0f - k) * enginePower;
+	float denom = (1.0f - k) * EnginePower;
 	if (FMath::IsNearlyZero(denom))
 		return 1.0f;
 
@@ -81,18 +81,18 @@ float UFlightMovement::CalculateThrottleForTargetVelocity(float targetVelocity)
 void UFlightMovement::RotationCalculation(float deltaTime)
 {
 	const float minDelta = 0.01f;
-	rotationDelta.X = FMath::Clamp(rotationDelta.X + (Control->Yoke.X * rotationSpeed.X /* * rotationSpeed.z*/ * 5.0f * deltaTime - rotationDelta.X /* * rotationSpeed.z * 0.5f*/ * 2.5f * deltaTime), -rotationSpeed.X, rotationSpeed.X);
-	rotationDelta.Y = FMath::Clamp(rotationDelta.Y + (Control->Yoke.Y * rotationSpeed.Y /* * rotationSpeed.y*/ * 5.0f * deltaTime - rotationDelta.Y /* * rotationSpeed.y * 0.5f*/ * 2.5f * deltaTime), -rotationSpeed.Y, rotationSpeed.Y);
-	rotationDelta.Z = FMath::Clamp(rotationDelta.Z + (Control->Yoke.Z * rotationSpeed.Z /* * rotationSpeed.x*/ * 5.0f * deltaTime - rotationDelta.Z /* * rotationSpeed.x * 0.5f*/ * 2.5f * deltaTime), -rotationSpeed.Z, rotationSpeed.Z);
+	RotationDelta.X = FMath::Clamp(RotationDelta.X + (Control->Yoke.X * RotationSpeed.X /* * rotationSpeed.z*/ * 5.0f * deltaTime - RotationDelta.X /* * rotationSpeed.z * 0.5f*/ * 2.5f * deltaTime), -RotationSpeed.X, RotationSpeed.X);
+	RotationDelta.Y = FMath::Clamp(RotationDelta.Y + (Control->Yoke.Y * RotationSpeed.Y /* * rotationSpeed.y*/ * 5.0f * deltaTime - RotationDelta.Y /* * rotationSpeed.y * 0.5f*/ * 2.5f * deltaTime), -RotationSpeed.Y, RotationSpeed.Y);
+	RotationDelta.Z = FMath::Clamp(RotationDelta.Z + (Control->Yoke.Z * RotationSpeed.Z /* * rotationSpeed.x*/ * 5.0f * deltaTime - RotationDelta.Z /* * rotationSpeed.x * 0.5f*/ * 2.5f * deltaTime), -RotationSpeed.Z, RotationSpeed.Z);
 
 	//if (rotationDelta.IsNearlyZero())
 	//	rotationDelta = FVector3d::ZeroVector;
 
-	if (FMath::Abs(rotationDelta.X) < minDelta) rotationDelta.X = 0.0f;
-	if (FMath::Abs(rotationDelta.Y) < minDelta) rotationDelta.Y = 0.0f;
-	if (FMath::Abs(rotationDelta.Z) < minDelta) rotationDelta.Z = 0.0f;
+	if (FMath::Abs(RotationDelta.X) < minDelta) RotationDelta.X = 0.0f;
+	if (FMath::Abs(RotationDelta.Y) < minDelta) RotationDelta.Y = 0.0f;
+	if (FMath::Abs(RotationDelta.Z) < minDelta) RotationDelta.Z = 0.0f;
 
-	FRotator rotator = FRotator(rotationDelta.Z * deltaTime * Control->GetHighGTurn(deltaTime), rotationDelta.Y * deltaTime, rotationDelta.X * deltaTime);
+	FRotator rotator = FRotator(RotationDelta.Z * deltaTime * Control->GetHighGTurn(deltaTime), RotationDelta.Y * deltaTime, RotationDelta.X * deltaTime);
 	GetOwner()->AddActorLocalRotation(FQuat(rotator));
 }
 
@@ -108,12 +108,12 @@ void UFlightMovement::SystemIntegration(FControl* poineter, FAircraftSpec* specP
 
 	NonExceedSpeed = specPointer->NonExceedSpeed;
 	Control->Velocity = IdleSpeed = specPointer->IdleSpeed;
-	enginePower = specPointer->EnginePower;
+	EnginePower = specPointer->EnginePower;
 
-	airbrakePower = specPointer->AirbrakePower;
-	rotationDelta = FVector::ZeroVector;
-	dragFactor = specPointer->DragFactor;
-	rotationSpeed = specPointer->RotationSpeed;
+	AirbrakePower = specPointer->AirbrakePower;
+	RotationDelta = FVector::ZeroVector;
+	DragFactor = specPointer->DragFactor;
+	RotationSpeed = specPointer->RotationSpeed;
 	//control->CalculateThrottle = FControl::FCalculateThrottle::CreateUObject(this, &UFlightMovement::CalculateThrottleForTargetVelocity);
 	Control->CalculateThrottle.BindUObject(this, &UFlightMovement::CalculateThrottleForTargetVelocity);
 }
@@ -138,6 +138,7 @@ void UFlightMovement::FollowWaypoint(float deltaTime)
 			double leftPercentage = FMath::Min(FMath::Sqrt(leftDistanceSqare / sqrDisatnce), 1.0);
 			FVector finalPosition = FMath::Lerp(position, data.Position, leftPercentage);
 			FQuat finalRotation = FQuat::Slerp(rotation, data.Rotation, leftPercentage);
+
 			GetOwner()->SetActorLocationAndRotation(finalPosition, finalRotation);
 
 			leftDistanceSqare = 0.0;

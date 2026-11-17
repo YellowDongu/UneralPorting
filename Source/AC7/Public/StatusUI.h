@@ -17,6 +17,7 @@ public:
 	void BindPlayer(class AAircraft* vehicle, class APlayerPilot* player);
 	//virtual void NativePreConstruct() override;
 
+	void SetColor(FLinearColor NewColor);
 private:
 	TWeakObjectPtr<class AAircraft> Player{ nullptr };
 

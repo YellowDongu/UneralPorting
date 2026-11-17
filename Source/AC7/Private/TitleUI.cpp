@@ -22,6 +22,7 @@ void UTitleUI::NativeConstruct()
 
 	TurnToMainMenu = GetGameInstance<UGameMaster>()->GetCollector()->GetSound(TEXT("TurnToMainMenu"));
 	FrontUI = GetWorld()->GetFirstPlayerController()->GetHUD<AUIHandler>()->CreateStageChangeUIUnit();
+	Flag = -1;
 }
 
 void UTitleUI::NativeTick(const FGeometry& myGeometry, float DeltaTime)

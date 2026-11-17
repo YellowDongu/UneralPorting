@@ -228,6 +228,10 @@ void FCustomToolViewportClient::Draw(const FSceneView* View, FPrimitiveDrawInter
     for (int32 i = 1; i < PointList.Num(); ++i)
         PDI->DrawLine(PointList[i - 1], PointList[i], FLinearColor::Green, SDPG_Foreground, 2.0f);
 
+    Jump = 1;
+    if (PointList.Num() > 1)
+        Jump = FMath::Max(1, FMath::FloorToInt(DisplayDistance / (PointList[0] - PointList[1]).Length()));
+
     const TArray<FQuat>& Rots = WaypointData->GetSplineRotationList();
     for (int32 i = 0; i < PointList.Num(); i += Jump)   // spacing이 1이면 샘플이 많으니 간격을 띄워서
         DrawCoordinateSystem(PDI, PointList[i], FRotator(Rots[i]), 30.f, SDPG_Foreground);

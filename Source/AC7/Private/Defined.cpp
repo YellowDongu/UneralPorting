@@ -53,27 +53,19 @@ void FStringListPanelController::Initialize()
 
 void FStringListPanelController::ChangeIndex(int index)
 {
+	if (TextBlockList.IsEmpty())
+	{
+		Index = -1;
+		return;
+	}
+
+	index = index >= MaxIndex ? MaxIndex - 1 : (index < 0 ? 0 : index);
 	if (Index == index)
 		return;
+	Index = index;
 
 	UCanvasPanelSlot* canvasSlot = Cast<UCanvasPanelSlot>(SelectedBar->Slot);
 	check(canvasSlot);
-	//if (Index < 0 || Index >= CurrentListController->GetMaxIndex())
-
-	if (index >= MaxIndex)
-	{
-		index = MaxIndex - 1;
-		if (Index == index)
-			return;
-	}
-	if (index < 0)
-	{
-		index = 0;
-		if (Index == index)
-			return;
-	}
-
-	Index = index;
 	FVector2D newPosition = FVector2D(canvasSlot->GetPosition().X, BaseYValue + CellYValue * static_cast<float>(Index));
 	canvasSlot->SetPosition(newPosition);
 }
@@ -104,6 +96,32 @@ FString ExtractFileName(const FString& FilePath) // 메모용
 }
 FString ExtractFileExtension(const FString& FilePath) { return FPaths::GetExtension(FilePath); } // 메모용
 FString ExtractFileFullName(const FString& FilePath) { return FPaths::GetCleanFilename(FilePath); } // 메모용
+
+#include "ObjectFactory.h"
+void CheatDeleteEnemy(UWorld* world)
+{
+	UObjectFactory* objectFactory = world->GetSubsystem<UObjectFactory>();
+	if (objectFactory == nullptr)
+		return;
+
+	TSet<TWeakObjectPtr<class AVehicleBase>> listSet = objectFactory->GetAllVehicle()[2];
+	for (auto& item : listSet)
+	{
+		static constexpr unsigned int intmax = static_cast<unsigned int>(-1) / 2;
+		item->HPDamage(TNumericLimits<int>::Max());
+		if (item->IsAlive())
+			item->HPDamage(TNumericLimits<int>::Max());
+	}
+
+	listSet = objectFactory->GetAllVehicle()[0];
+	for (auto& item : listSet)
+	{
+		static constexpr unsigned int intmax = static_cast<unsigned int>(-1) / 2;
+		item->HPDamage(TNumericLimits<int>::Max());
+		if (item->IsAlive())
+			item->HPDamage(TNumericLimits<int>::Max());
+	}
+}
 
 const static FString FileExtension = TEXT("meta");
 const static FString FileFilter = TEXT("*.") + FileExtension;

@@ -50,6 +50,8 @@ public:
 	TObjectPtr<class UNiagaraSystem> CreateExplosionSystem();
 
 	const TSoftObjectPtr<class UMovementPathAsset>* GetManeuverAsset(const FString& name) const { return ManeuverAssets.Find(name); }
+	void GetManeuverData(const FString& name, TArray<FWaypointData>& output);
+
 	FString GetMissionLevelName(int index);
 	TSoftObjectPtr<UWorld> GetMissionLevel(int index) { return ((index < 0 || index >= Levels.Num()) ? nullptr : Levels[index]); }
 	TSoftObjectPtr<UWorld> GetMissionLevel(const FString& Name) { auto result = LevelInfomation.Find(Name); return ((result == nullptr) ? nullptr : result->LevelPtr); }
@@ -92,6 +94,8 @@ private:
 	TMap<FString, FLevelInfo> LevelInfomation;
 	TMap<FString, TObjectPtr<USoundBase>> Sounds;
 	TMap<FString, TSoftObjectPtr<USoundBase>> SoundAssets;
+
 	UPROPERTY(VisibleAnywhere)
 	TMap<FString, TSoftObjectPtr<class UMovementPathAsset>> ManeuverAssets;
+	TMap<FString, TArray<TArray<FWaypointData>>> LoadedManeuverData;
 };

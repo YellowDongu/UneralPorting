@@ -31,6 +31,7 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
     virtual void Release(void);
+    virtual void SetMoveable(bool active) { bMoveable = active; } // pure?
     void HPDamage(int damage);
 
 
@@ -71,6 +72,7 @@ public:
 protected:
     FOnDamageEvent DamageEvent;
 
+    bool bMoveable{ false };
     bool bIsTGT{ false }, bIsAlive{ false };
     int HP{ 0 };
     int Team{ 0 };

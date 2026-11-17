@@ -5,6 +5,7 @@
 #include "SelectPanel.h"
 #include "TeamManagementSystem.h"
 #include "MissionMode.h"
+#include "Aircraft.h"
 
 //#define EndCondVisibleTest
 bool UTGTKillEndCondition::Update(float deltaTime)
@@ -184,6 +185,8 @@ void ASpawnTrigger::CreateInstance(int index, UObjectFactory* objectFactory, UTe
 	auto& item = list[index];
 
 	TWeakObjectPtr<AVehicleBase> leader{nullptr};
+	TWeakObjectPtr<AVehicleBase>& newInstance = instanceList[index];
+
 	if (item.LeaderIndex != -1)
 	{
 		if (instanceList[item.LeaderIndex] == nullptr)
@@ -191,11 +194,15 @@ void ASpawnTrigger::CreateInstance(int index, UObjectFactory* objectFactory, UTe
 		leader = instanceList[item.LeaderIndex];
 	}
 
-	instanceList[index] = objectFactory->Instantiate(item, teamSystem, leader, GetWorld());
-	if (instanceList[index] == nullptr)
+	newInstance = objectFactory->Instantiate(item, teamSystem, leader, GetWorld());
+	if (!newInstance.IsValid())
 		return;
 
 	instanceList[index]->SetActorLocationAndRotation(item.GlobalPosition(), item.GlobalRotation());
+
+	if (newInstance->IsAir())
+		StaticCast<AAircraft*>(newInstance.Get())->SetGear(false, true);
+
 	AntiRecursionCounter--;
 }
 

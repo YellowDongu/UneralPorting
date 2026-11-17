@@ -29,5 +29,5 @@ private:
     bool bDraggingWaypoint = false;
     float SpawnDistance = 1000.0f;
     int Jump = 1;
-    int DisplayDistance = 50.0f;
+    int DisplayDistance = 100.0f;
 };

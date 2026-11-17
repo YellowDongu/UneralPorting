@@ -42,6 +42,11 @@ void AAircraft::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 void AAircraft::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+
+	VehicleMask.bAir = true;
+	VehicleMask.bLand = false;
+	VehicleMask.bSea = false;
+	VehicleMask.Initialize();
 }
 
 void AAircraft::BeginPlay()
@@ -59,17 +64,19 @@ void AAircraft::SystemInitialize(const FSpawnInfomation& spawnInfomation)
 
 	if (spawnInfomation.bIsPlayer && spawnInfomation.playerInfoPointer != nullptr)
 	{
-		FireControlSystem->SystemInitialize(spawnInfomation.playerInfoPointer->SpecialWeaponIndex);
+		FireControlSystem->SystemInitialize(spawnInfomation.playerInfoPointer->SpecialWeapon);
 
 	}
 	else
-		FireControlSystem->SystemInitialize(-1);
+		FireControlSystem->SystemInitialize(EWeaponID::END);
 }
 
 void AAircraft::SystemIntegration()
 {
-	if (bSystemIntegrated || !bReadyBlueprint)
+	if (bSystemIntegrated)
 		return;
+
+	SetMoveable(false);
 
 	USceneComponent* WeaponContainer = nullptr;
 	const TArray<USceneComponent*>& RootChildren = GetRootComponent()->GetAttachChildren();
@@ -79,12 +86,10 @@ void AAircraft::SystemIntegration()
 		if (Child->GetFName() == TEXT("Weapon"))
 			WeaponContainer = Child;
 		else if (Child->GetFName() == TEXT("FirstView"))
-			FirstCameraArm = FindComponentByClass<USceneComponent>();
+			FirstCameraArm = Child;
 	}
 
 	ThirdCameraArm = FindComponentByClass<USpringArmComponent>();
-	if (ThirdCameraArm == nullptr || FirstCameraArm == nullptr)
-		bReadyBlueprint = false;
 
 	Audio = FindComponentByClass<UAudioComponent>();
 
@@ -110,19 +115,19 @@ void AAircraft::SystemIntegration()
 		return;
 
 	PrimaryActorTick.bStartWithTickEnabled = true;
-	SetActorTickEnabled(true);
+	SetMoveable(true);
 }
 
 void AAircraft::AttachCamera(TWeakObjectPtr<UCameraComponent>& camera, bool thridViewAttach)
 {
-	if (ThirdCameraArm == nullptr || FirstCameraArm == nullptr)
-		return;
-
-	if (camera == nullptr)
-		camera = NewObject<UCameraComponent>(this, TEXT("BaseCamera"));
-
 	if (thridViewAttach)
 	{
+		if (ThirdCameraArm == nullptr)
+			return;
+
+		if (camera == nullptr)
+			camera = NewObject<UCameraComponent>(this, TEXT("BaseCamera"));
+
 		camera->SetupAttachment(ThirdCameraArm, USpringArmComponent::SocketName);
 		camera->RegisterComponent();
 
@@ -144,12 +149,33 @@ void AAircraft::AttachCamera(TWeakObjectPtr<UCameraComponent>& camera, bool thri
 	}
 	else
 	{
+		if (FirstCameraArm == nullptr)
+			return;
+
+		if (camera == nullptr)
+			camera = NewObject<UCameraComponent>(this, TEXT("BaseCamera"));
+
 		camera->SetupAttachment(FirstCameraArm);
 		camera->RegisterComponent();
 
 		camera->SetRelativeLocation(FVector::ZeroVector);
 		camera->SetRelativeRotation(FRotator::ZeroRotator);
 	}
+}
+
+void AAircraft::SetMoveable(bool active)
+{
+	if(bMoveable == active)
+		return;
+
+	if (!bSystemIntegrated)
+		return;
+
+	bMoveable = active;
+
+	bIsAlive = bMoveable;
+	SetActorEnableCollision(bMoveable);
+	SetActorTickEnabled(bMoveable);
 }
 
 void AAircraft::ChangeTarget() { FireControlSystem->ChangeTarget(); }
