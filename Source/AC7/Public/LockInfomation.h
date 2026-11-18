@@ -23,6 +23,7 @@ public:
 		TSubclassOf<AActor> RangeIndicatorBluePrint;
 	};
 
+	virtual void Initialize(IndicatorCreationData& data) {}
 	virtual void Update(float deltaTime, FTargetInfo* target) {}
 	virtual void SetActive(bool value) {}
 	virtual void SetColor(const FLinearColor& color) {}
@@ -40,6 +41,7 @@ public:
 	LockIndicator() = default;
 	virtual ~LockIndicator() = default;
 
+	virtual void Initialize(IndicatorCreationData& data) override;
 	void Initialize(class UCanvasPanel* canvasPanel, TSubclassOf<class UUserWidget>& LockBluePrint);
 	virtual void Update(float deltaTime, FTargetInfo* target) override;
 	virtual void SetActive(bool value) override;
@@ -63,7 +65,7 @@ public:
 	SAAMLockIndicator() = default;
 	virtual ~SAAMLockIndicator() = default;
 
-	void Initialize(IndicatorCreationData& data);
+	virtual void Initialize(IndicatorCreationData& data) override;
 	virtual void Update(float deltaTime, FTargetInfo* target) override;
 	virtual void SetActive(bool value) override;
 	virtual void SetColor(const FLinearColor& color) override;
@@ -81,6 +83,7 @@ public:
 	BombIndicator() = default;
 	virtual ~BombIndicator() = default;
 
+	virtual void Initialize(IndicatorCreationData& data) override;
 	void Initialize(TWeakObjectPtr<class UFireControlSystem> fcs, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area);
 
 	virtual void Update(float deltaTime, FTargetInfo* target) override;
@@ -106,7 +109,8 @@ public:
 	LockableBombIndicator() = default;
 	virtual ~LockableBombIndicator() = default;
 
-	void Initialize(class UCanvasPanel* canvasPanel, TSubclassOf<class UUserWidget>& LockBluePrint, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area);
+	virtual void Initialize(IndicatorCreationData& data) override;
+	void Initialize(TWeakObjectPtr<class UFireControlSystem> fcs, class UCanvasPanel* canvasPanel, TSubclassOf<class UUserWidget>& LockBluePrint, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area);
 	virtual void Update(float deltaTime, FTargetInfo* target) override;
 	virtual void SetActive(bool value) override;
 	virtual void SetColor(const FLinearColor& color) override;

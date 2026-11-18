@@ -10,6 +10,17 @@
 /**
  * 
  */
+USTRUCT(Blueprintable)
+struct FLevelData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	FString LevelLabel;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	TSoftObjectPtr<UWorld> LevelPtr;
+};
+
 UCLASS(Blueprintable)
 class AC7_API UBluePrintCollector : public UObject
 {
@@ -27,11 +38,21 @@ class AC7_API UBluePrintCollector : public UObject
 
 	struct FLevelInfo
 	{
+	public:
+		FLevelInfo(void) = default;
 		FLevelInfo(const TSoftObjectPtr<UWorld>& level);
 		FString LevelName;
+		FString LevelLabel;
 		FSoftObjectPath LevelPath;
 		TSoftObjectPtr<UWorld> LevelPtr;
 
+		void SetData(const FLevelData& level)
+		{
+			LevelPtr = level.LevelPtr;
+			LevelLabel = level.LevelLabel;
+			LevelPath = LevelPtr.ToSoftObjectPath();
+			LevelName = LevelPath.GetAssetName();
+		}
 		void SetInfo(const TSoftObjectPtr<UWorld>& level)
 		{
 			LevelPtr = level;
@@ -41,13 +62,13 @@ class AC7_API UBluePrintCollector : public UObject
 	};
 
 public:
-	virtual void PostInitProperties() override;
+	virtual void PostInitProperties(void) override;
 
 	TWeakObjectPtr<class AVehicleBase> Create(EVehicleID ID, UWorld* world, bool& isAircraft);
 	TWeakObjectPtr<class AAIPilot> CreateAIPilot(UWorld* world, const FSpawnInfomation& infomation);
 	TWeakObjectPtr<class AFlare> CreateFlare(UWorld* world);
 	TWeakObjectPtr<class ABullet> CreateBullet(UWorld* world);
-	TObjectPtr<class UNiagaraSystem> CreateExplosionSystem();
+	TObjectPtr<class UNiagaraSystem> CreateExplosionSystem(void);
 
 	const TSoftObjectPtr<class UMovementPathAsset>* GetManeuverAsset(const FString& name) const { return ManeuverAssets.Find(name); }
 	void GetManeuverData(const FString& name, TArray<FWaypointData>& output);
@@ -55,6 +76,7 @@ public:
 	FString GetMissionLevelName(int index);
 	TSoftObjectPtr<UWorld> GetMissionLevel(int index) { return ((index < 0 || index >= Levels.Num()) ? nullptr : Levels[index]); }
 	TSoftObjectPtr<UWorld> GetMissionLevel(const FString& Name) { auto result = LevelInfomation.Find(Name); return ((result == nullptr) ? nullptr : result->LevelPtr); }
+	const FLevelInfo* GetMissionLevelData(const FString& Name) const { auto result = LevelInfomation.Find(Name); return ((result == nullptr) ? nullptr : result); }
 
 	USoundBase* GetSound(const FString& name);
 	const TSoftObjectPtr<UWorld>& GetSelectLevel() const { return SelectLevel; }
@@ -81,6 +103,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Blueprint", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<class ABullet> BulletBluePrint;
 
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = LevelBlueprint, meta = (AllowPrivateAccess = "true"))
+	TArray<FLevelData> LevelList;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = LevelBlueprint, meta = (AllowPrivateAccess = "true"))
 	TArray<TSoftObjectPtr<UWorld>> Levels;

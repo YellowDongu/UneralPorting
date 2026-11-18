@@ -16,6 +16,9 @@ public:
     virtual void PostInitializeComponents(void) override;
     virtual void BeginPlay(void) override;
 
+    void TrackEnemy(float deltaTime);
+
+
     virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output); // return false at cooltime
     virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked); // return false at cooltime
     virtual void Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked);

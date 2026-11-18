@@ -128,8 +128,8 @@ void UAircraftAnimator::ReadComponent()
 	bStaticGearActive = false;
 	if (!bNoGear)
 	{
-		GearOffStaticMesh->SetVisibility(false);
-		GearOnStaticMesh->SetVisibility(false);
+		if(GearOffStaticMesh != nullptr) GearOffStaticMesh->SetVisibility(false);
+		if (GearOnStaticMesh != nullptr) GearOnStaticMesh->SetVisibility(false);
 
 		bStaticGearActive = !bNoGear ? false : GearOnStaticMesh != nullptr;
 	}

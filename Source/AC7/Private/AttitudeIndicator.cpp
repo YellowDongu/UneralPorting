@@ -55,8 +55,8 @@ TObjectPtr<UPitchBar> UAttitudeIndicator::AddPitchBar(int pitchLevel, bool back)
 
 	newInstance->SetNumber(pitchLevel / 2 * 5);
 
-	newInstance->SetUIColor(currentColor);
-	newInstance->SetSideTextColor(currentColor);
+	newInstance->SetUIColor(CurrentColor);
+	newInstance->SetSideTextColor(CurrentColor);
 
 	if (back)
 		Alive.Add({ newInstance, flag });
@@ -70,6 +70,86 @@ void UAttitudeIndicator::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
+	InitializeHUD();
+}
+
+void UAttitudeIndicator::NativeConstruct()
+{
+	Super::NativeConstruct();
+	return;
+
+	if (!bBinded || !bInitialized)
+	{
+		RemoveFromParent();
+		return;
+	}
+
+}
+
+void UAttitudeIndicator::BindPlayer(class AAircraft* vehicle, class APlayerPilot* player)
+{
+	if (vehicle == nullptr || player == nullptr)
+	{
+		RemoveFromParent();
+		return;
+	}
+
+	InitializeHUD();
+	GetEularAngle.BindUObject(vehicle, &AAircraft::GetActorRotation);
+	bBinded = true;
+}
+
+TObjectPtr<UPitchBar> UAttitudeIndicator::Get(PitchFlag enumFlag)
+{
+	if (enumFlag == PitchFlag::PitchCenter)
+	{
+		PitchCenter->SetVisibility(ESlateVisibility::Visible);
+		return PitchCenter;
+	}
+
+	int flag = FlagConvert(enumFlag);
+	TObjectPtr<UPitchBar> returnPointer;
+
+	while (!IsValid(returnPointer) && !Pool[flag].IsEmpty())
+		returnPointer = Pool[flag].Pop(false);
+
+	if (returnPointer == nullptr)
+	{
+		switch (enumFlag)
+		{
+		case PitchFlag::PitchNeg:
+			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchNeg);
+			break;
+		case PitchFlag::PitchNegHalf:
+			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchNegHalf);
+			break;
+		case PitchFlag::PitchPos:
+			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchPos);
+			break;
+		case PitchFlag::PitchPosHalf:
+			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchPosHalf);
+			break;
+		default:
+			return nullptr;
+		}
+
+		if (returnPointer == nullptr)
+			return nullptr;
+
+		returnPointer->SetUp(BasePanel);
+	}
+
+	returnPointer->SetVisibility(ESlateVisibility::Visible);
+	return returnPointer;
+
+}
+
+void UAttitudeIndicator::InitializeHUD(void)
+{
+	if (bInitialized)
+		return;
+
+	bInitialized = true;
 	if (PitchCenter == nullptr || PitchCenter->SetUp() == nullptr)
 	{
 		RemoveFromParent();
@@ -110,113 +190,6 @@ void UAttitudeIndicator::NativePreConstruct()
 	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number++) * Space));
 	newInstance = AddPitchBar(-number);
 	newInstance->SetPosition(FVector2D(0.0f, static_cast<float>(number) * Space));
-
-	bInitialized = true;
-}
-
-void UAttitudeIndicator::NativeConstruct()
-{
-	Super::NativeConstruct();
-	return;
-
-	if (!bBinded || !bInitialized)
-	{
-		RemoveFromParent();
-		return;
-	}
-
-}
-
-void UAttitudeIndicator::BindPlayer(class AAircraft* vehicle, class APlayerPilot* player)
-{
-	if (vehicle == nullptr || player == nullptr)
-	{
-		RemoveFromParent();
-		return;
-	}
-
-	currentColor = BaseColor;
-
-	GetEularAngle.BindUObject(vehicle, &AAircraft::GetActorRotation);
-	bBinded = true;
-}
-
-TObjectPtr<UPitchBar> UAttitudeIndicator::Get(PitchFlag enumFlag)
-{
-	int flag = 0;
-	switch (enumFlag)
-	{
-	case PitchFlag::PitchCenter:
-		PitchCenter->SetVisibility(ESlateVisibility::Visible);
-		return PitchCenter;
-	default:
-		flag = FlagConvert(enumFlag);
-		break;
-	}
-
-	TObjectPtr<UPitchBar> returnPointer;
-	if (Pool[flag].IsEmpty())
-	{
-		switch (enumFlag)
-		{
-		case PitchFlag::PitchNeg:
-			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchNeg);
-			break;
-		case PitchFlag::PitchNegHalf:
-			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchNegHalf);
-			break;
-		case PitchFlag::PitchPos:
-			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchPos);
-			break;
-		case PitchFlag::PitchPosHalf:
-			returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchPosHalf);
-			break;
-		default:
-			return nullptr;
-		}
-
-		if (returnPointer == nullptr)
-			return nullptr;
-
-		returnPointer = returnPointer->SetUp(BasePanel);
-		if (returnPointer == nullptr)
-			return nullptr;
-
-		return returnPointer;
-	}
-	else
-	{
-		while (returnPointer != nullptr)
-			returnPointer = Pool[flag].Pop(false);
-
-		if (returnPointer == nullptr) // 함수화 안함. CTRL CV가 편해
-		{
-			switch (enumFlag)
-			{
-			case PitchFlag::PitchNeg:
-				returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchNeg);
-				break;
-			case PitchFlag::PitchNegHalf:
-				returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchNegHalf);
-				break;
-			case PitchFlag::PitchPos:
-				returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchPos);
-				break;
-			case PitchFlag::PitchPosHalf:
-				returnPointer = CreateWidget<UPitchBar>(GetWorld(), PitchPosHalf);
-				break;
-			default:
-				return nullptr;
-			}
-
-			if (returnPointer == nullptr)
-				return nullptr;
-			return returnPointer->SetUp(BasePanel);
-		}
-
-		returnPointer->SetVisibility(ESlateVisibility::Visible);
-		return returnPointer;
-	}
 }
 
 void UAttitudeIndicator::Release(const TObjectPtr<UPitchBar>& ui, PitchFlag flag)
@@ -253,13 +226,13 @@ FORCEINLINE int UAttitudeIndicator::FlagConvert(PitchFlag flag)
 
 void UAttitudeIndicator::ChangeColor(FLinearColor color)
 {
-	if (currentColor == color)
+	if (CurrentColor == color)
 		return;
 
-	currentColor = color;
+	CurrentColor = color;
 	for (auto& item : Alive)
 	{
-		item.Key->SetUIColor(currentColor);
-		item.Key->SetSideTextColor(currentColor);
+		item.Key->SetUIColor(CurrentColor);
+		item.Key->SetSideTextColor(CurrentColor);
 	}
 }

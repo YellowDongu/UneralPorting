@@ -24,6 +24,7 @@ private:
 	int Flag{ -1 };
 
 	FTimerHandle TimerHandle;
+	FSequenceTask Sequence;
 
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	class UCanvasPanel* TitleCanvas{ nullptr };

@@ -38,7 +38,7 @@ void ASemiActiveAntiAirMissile::Tick(float DeltaTime)
 
     SetActorLocation(position + GetActorForwardVector() * distance);
 
-    if (!IsAlive(Owner) || !FCSInfo->IsEmpty())
+    if (!IsAlive(Owner) || FCSInfo->IsEmpty())
         return;
 
     Rebind((*FCSInfo)[0].Target);
@@ -109,6 +109,10 @@ void ASemiActiveAntiAirMissile::Release()
 
 bool ASemiActiveAntiAirMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output)
 {
+    Owner = Cast<AAircraft>(owner);
+    if (Owner == nullptr)
+        return false;
+
     if(!Super::Shoot(owner, locked, output))
         return false;
 
@@ -116,7 +120,6 @@ bool ASemiActiveAntiAirMissile::Shoot(TWeakObjectPtr<class AVehicleBase> owner, 
         return false;
 
     ASemiActiveAntiAirMissile* newInstance = static_cast<ASemiActiveAntiAirMissile*>(output);
-    Owner = Cast<AAircraft>(owner);
     newInstance->FCSInfo = &Owner->GetFireControlSystem()->GetCurrentTargets();
 
     return true;

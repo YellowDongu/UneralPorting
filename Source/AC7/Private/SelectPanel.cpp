@@ -115,7 +115,7 @@ void USelectPanel::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 void USelectPanel::Select()
 {
 	int Index = CurrentListController->GetCurrentIndex();
-	if (CurrentListController->IsValidIndex(Index)) return;
+	if (!CurrentListController->IsValidIndex(Index)) return;
 
 	switch (Phase)
 	{
@@ -133,6 +133,7 @@ void USelectPanel::Select()
 		break;
 	case 1:
 	{
+		Deactive();
 		EnterStage();
 		//UGameMaster* gameMaster = GetGameInstance<UGameMaster>();
 		//FPlayerSpawnInfomation info;
@@ -179,7 +180,7 @@ void USelectPanel::Deselect()
 		levelLoader->Unload(TEXT("VehicleSet"));
 		levelLoader->Unload(TEXT("SelectLevel"));
 		stageChangeUIUnit->ReturnMainMenu();
-		bActive = false;
+		Deactive();
 		Phase = 0;
 	}
 	break;
@@ -234,7 +235,7 @@ void USelectPanel::EnterStage(void)
 	//info.SpecialWeaponIndex = -1;
 	//gameMaster->ReserveLevel(FString(TEXT("MS01")));
 
-	if (gameMaster->GetReserveLevel() == nullptr)
+	if (gameMaster->GetReserveLevel().IsNull())
 	{
 		UE_LOG(LogTemp, Error, TEXT("[ERROR] No level selected, Select Default Level"));
 		gameMaster->ReserveLevel(FString(TEXT("MS01")));

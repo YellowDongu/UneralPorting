@@ -44,6 +44,19 @@ constexpr FLinearColor HUDColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.8f);
 constexpr FLinearColor AlartColor = FLinearColor(1.0f, 0.0f, 0.0f, 0.8f);
 constexpr FLinearColor BaseColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.8f);
 
+
+#if WITH_EDITOR
+
+#define ErrorLog(Format, ...) \
+ensureAlwaysMsgf(false, Format, ##__VA_ARGS__); \
+if constexpr (std::is_base_of_v<UObject, std::remove_pointer_t<decltype(this)>>) \
+    UKismetSystemLibrary::QuitGame(this, nullptr, EQuitPreference::Quit, false); \
+
+#else
+#define ErrorLog(Format, ...) UE_LOG(LogTemp, Fatal, Format, ...)
+#endif
+
+//UE_LOG(LogTemp, Fatal, ...) // => 크래시
 /*
 void Function(const TCHAR* Format, ...)
 {
@@ -99,7 +112,6 @@ void Function(const TCHAR* Message, ...)
 #define MY_MACRO(...) \
 	SELECT_MACRO(__VA_ARGS__, MACRO_2, MACRO_1)(__VA_ARGS__)
 
-//UE_LOG(LogTemp, Fatal, ...) // => 크래시
 #if WITH_EDITOR
 
 #define VariableCheck(var1, var2, var3, NAME, ...) NAME
@@ -221,12 +233,14 @@ UENUM(BlueprintType)
 enum class EVehicleID : uint8
 {
 	Aircraft = 0,
+
 	F15E,
 	SU33,
 	F14D,
 
 	AirEND,
 	Ground = 100,
+
 	GECK,
 	GEPA,
 
@@ -474,7 +488,7 @@ void CheatDeleteEnemy(UWorld* world);
 
 
 
-struct SequenceTask
+struct FSequenceTask
 {
 	DECLARE_DELEGATE_RetVal_OneParam(bool, FSequenceFunction, float);
 
@@ -486,10 +500,9 @@ struct SequenceTask
 
 		if (!SequenceList[currentIndex].IsBound())
 		{
-			SequenceList.RemoveAt(currentIndex);
+			currentIndex++;
 			AccumulateTime = 0.0f;
-			if (!SequenceList.IsValidIndex(currentIndex))
-				return;
+			return;
 		}
 
 		AccumulateTime += DeltaTime;
@@ -499,8 +512,8 @@ struct SequenceTask
 			AccumulateTime = 0.0f;
 			currentIndex++;
 		}
-		
 	}
+
 	void AddSequence(FSequenceFunction delegate) { SequenceList.Add(MoveTemp(delegate)); }
 	void InsertSequence(FSequenceFunction delegate, int index, bool overrideMode = false)
 	{

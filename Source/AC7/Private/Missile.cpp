@@ -190,6 +190,45 @@ void AMissile::BeginPlay(void)
     AngleCos = FMath::Cos(FMath::DegreesToRadians(lockAngle));
 }
 
+void AMissile::TrackEnemy(float deltaTime)
+{
+    if (FlyDistance < 0.0f)
+    {
+        Release();
+        return;
+    }
+
+    float distance = ConvertFromVelocity(velocity) * deltaTime;
+    FlyDistance -= distance;
+
+    FRotator CurrentRotation = GetActorRotation();
+    FVector position = GetActorLocation();
+
+    SetActorLocation(position + GetActorForwardVector() * distance);
+
+    if (!IsAlive(Target))
+    {
+        SetActorRotation(FMath::RInterpTo(CurrentRotation, FRotator(0.0f, CurrentRotation.Yaw, CurrentRotation.Roll), deltaTime, rotationSpeed));
+        return;
+    }
+
+    FVector vector = Target->GetActorLocation() - position;
+    float sqrMagnitude = vector.SizeSquared();
+    GiveRadarWarn.ExecuteIfBound(sqrMagnitude);
+
+    if (sqrMagnitude < ImpactDistance)
+    {
+        UWorld* world = GetWorld();
+        UE_LOG(LogTemp, Log, TEXT("[AMissile::TrackEnemy] Collide -> %s"), *Target->GetName());
+        world->GetSubsystem<UObjectFactory>()->Explosion(world, position, 150.0f, 2.0f);
+        Target->HPDamage(damage);
+
+        Release();
+    }
+    else
+        SetActorRotation(FMath::RInterpTo(CurrentRotation, vector.Rotation(), deltaTime, rotationSpeed));
+}
+
 void AMissile::ResetMissileBind()
 {
     Target.Reset();

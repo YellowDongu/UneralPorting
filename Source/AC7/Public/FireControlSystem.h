@@ -54,14 +54,12 @@ public:
 	virtual void Update(float deltaTime);
 
     void ChangeTarget(void);
-    void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target, const FVector& forward, const FVector& position);
     void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target) { AddTarget(target, GetOwner()->GetActorForwardVector(), GetOwner()->GetActorLocation()); }
+    void AddTarget(const TWeakObjectPtr<class AVehicleBase>& target, const FVector& forward, const FVector& position);
     void AddTarget(AVehicleBase* target);
     //void RemoveTarget(const TWeakObjectPtr<class AVehicleBase>& target);
     void RemoveTarget(class AVehicleBase* target);
-	void ReplaceSelectedTarget(class AVehicleBase* target);
     void SetTarget(const TWeakObjectPtr<class AVehicleBase>& target);
-
 
     inline bool ChangeMissile(void)
     {
@@ -97,11 +95,11 @@ public:
     float SetCalculatedBombTime(float value) { return CalculatedBombTime; }
     
 
-    FSpecialMissileSlot* GetActivedSpecialSlot(void) { if (SpecialWeapon == INDEX_NONE) return nullptr; return &specialSlots[SpecialWeapon]; }
+    FSpecialMissileSlot* GetActivedSpecialSlot(void) { if (!specialSlots.IsValidIndex(SpecialWeapon)) return nullptr; return &specialSlots[SpecialWeapon]; }
     TWeakObjectPtr<class AMissile> GetWeapon(int specialWeaponIndex);
     TWeakObjectPtr<class AMissile> GetMissile(bool isSpecial);
     void GetCurrentTargets(TArray<FTargetInfo>*& pointer) { pointer = &currentTargets; }
-    const TArray<FTargetInfo>& GetCurrentTargets() const { return currentTargets; }
+    const TArray<FTargetInfo>& GetCurrentTargets(void) const { return currentTargets; }
 
     void GetSelectSpecial(const bool*& pointer) const { pointer = &bSpecialSelected; }
     bool GetSelectSpecial(void) const { return bSpecialSelected; }
@@ -111,12 +109,12 @@ public:
     int GetMultiShoot(void) const { return MultiShoot; }
     float GetCalculatedBombTime(void) const { return CalculatedBombTime; }
 
-    inline const FWeaponMask& GetMissileAimLayer() const; // 지금 활성화된 무장의 레이어 반환
+    inline const FWeaponMask& GetMissileAimLayer(void) const; // 지금 활성화된 무장의 레이어 반환
     inline const FWeaponMask& GetMissileAimLayer(bool isSpecial) const;// 무장(bool값으로 특수무장인지 일반무장인지)의 레이어 반환
     inline EWeaponID GetWeaponID(bool special = true) const;
 
 protected:
-    static constexpr bool bInsertMode{false};
+    static constexpr bool bInsertMode{ false };
     bool bSpecialSelected{ false }, bRefreshed{ false };
     int Team{ 0 }, SpecialWeapon{ INDEX_NONE }, MaxCount{ 1 }, MultiShoot{ 1 };
 

@@ -23,64 +23,74 @@ void UTitleUI::NativeConstruct()
 	TurnToMainMenu = GetGameInstance<UGameMaster>()->GetCollector()->GetSound(TEXT("TurnToMainMenu"));
 	FrontUI = GetWorld()->GetFirstPlayerController()->GetHUD<AUIHandler>()->CreateStageChangeUIUnit();
 	Flag = -1;
-}
 
-void UTitleUI::NativeTick(const FGeometry& myGeometry, float DeltaTime)
-{
-	switch (Flag)
-	{
-	case 0:
-		Timer -= DeltaTime;
-
-		if (Timer > 0.0f)
-			break;
-
-		FrontUI->FadeOut(true, 2.5f);
-		Flag++;
-		break;
-	case 1:
-		if (FrontUI->IsFadingOut())
-			break;
-
-		TitleCanvas->SetVisibility(ESlateVisibility::Visible);
-		PreTitleCanvas->SetVisibility(ESlateVisibility::Hidden);
-		FrontUI->FadeOut(false, 0.5f);
-		Flag++;
-		break;
-	case 2:
-		if (FrontUI->IsFadingOut())
-			break;
-
-		if (GetWorld()->GetFirstPlayerController()->WasInputKeyJustPressed(EKeys::Enter))
+	Sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
 		{
-			Timer = 2.5f;
-			Flag++;
-			UGameplayStatics::PlaySound2D(this, TurnToMainMenu);
-		}
-	case 3:
-		Timer -= DeltaTime;
-		if (Timer <= 0.0f)
+			check(TitleCanvas);
+			check(PreTitleCanvas);
+			check(Title);
+			check(PreTitle1);
+			check(NextText);
+			check(FrontUI.Get());
+
+			TitleCanvas->SetVisibility(ESlateVisibility::Hidden);
+			PreTitleCanvas->SetVisibility(ESlateVisibility::Visible);
+			return true;
+		}));
+
+	Sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
 		{
-			TWeakObjectPtr<UMainMenuUI> ui = GetWorld()->GetFirstPlayerController()->GetHUD<AUIHandler>()->CreateMainMenuUI();
+			if(accumulatedTime <= 5.0f)
+				return false;
+			FrontUI->FadeOut(true, 2.5f);
+			return true;
+		}));
+
+	Sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FrontUI->IsFadingOut())
+				return false;
+
+			TitleCanvas->SetVisibility(ESlateVisibility::Visible);
+			PreTitleCanvas->SetVisibility(ESlateVisibility::Hidden);
+			FrontUI->FadeOut(false, 0.5f);
+			return true;
+		}));
+
+	Sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this, controller = GetWorld()->GetFirstPlayerController()](float accumulatedTime)->bool
+		{
+			if (FrontUI->IsFadingOut())
+				return false;
+
+			if (controller->WasInputKeyJustPressed(EKeys::Enter))
+			{
+				UGameplayStatics::PlaySound2D(this, TurnToMainMenu);
+				return true;
+			}
+
+			return false;
+		}));
+
+	Sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this, controller = GetWorld()->GetFirstPlayerController()](float accumulatedTime)->bool
+		{
+			if (accumulatedTime < 2.5f)
+				return false;
+
+			TWeakObjectPtr<UMainMenuUI> ui = controller->GetHUD<AUIHandler>()->CreateMainMenuUI();
 			check(ui.Get());
 			ui->Active();
 
 			RemoveFromParent();
-			Flag++;
-		}
-		break;
-	default: // ÃÊ±âÈ­
-		check(TitleCanvas);
-		check(PreTitleCanvas);
-		check(Title);
-		check(PreTitle1);
-		check(NextText);
-		check(FrontUI.Get());
+			return true;
 
-		Timer = 5.0f;
-		Flag = 0;
-		TitleCanvas->SetVisibility(ESlateVisibility::Hidden);
-		PreTitleCanvas->SetVisibility(ESlateVisibility::Visible);
-		break;
-	}
+		}));
+
+	Sequence.currentIndex = 0;
 }
+
+void UTitleUI::NativeTick(const FGeometry& myGeometry, float DeltaTime) { Super::NativeTick(myGeometry, DeltaTime); Sequence.Update(DeltaTime); }

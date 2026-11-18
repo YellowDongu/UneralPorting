@@ -127,7 +127,7 @@ void ULockHUD::BindPlayer(AAircraft* vehicle, APlayerPilot* player)
 
 	bSelect = *bSelectSpecial;
 	SetSound(GetWorld());
-}
+	}
 
 void ULockHUD::SetSound(UWorld* world)
 {
@@ -186,7 +186,7 @@ void ULockHUD::PlayLockSound(float deltaTime, float maxTime)
 	SoundTimer = 0.0f;
 
 	bSoundActive = !bSoundActive;
-	UE_LOG(LogTemp, Log, TEXT("[ULockHUD::PlayLockSound] Active = %d, SoundTimer = %.3f, Lock = %.3f, maxtime = %.3f"), bSoundActive, SoundTimer, (*currentTargets)[0].Lock, maxTime);
+	//UE_LOG(LogTemp, Log, TEXT("[ULockHUD::PlayLockSound] Active = %d, SoundTimer = %.3f, Lock = %.3f, maxtime = %.3f"), bSoundActive, SoundTimer, (*currentTargets)[0].Lock, maxTime);
 
 	if (bSoundActive)
 		LockSoundSet->Channel->Stop();

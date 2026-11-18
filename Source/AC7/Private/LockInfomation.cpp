@@ -17,64 +17,60 @@
 
 TSharedPtr<LockSet> LockSet::Create(IndicatorCreationData& data)
 {
+	TSharedPtr<LockSet> indicator;
 //	LockSet* result = nullptr;
 	switch (data.Weapon->GetWeaponID())
 	{
 	case EWeaponID::Standard:
-	{
-		TSharedPtr<LockIndicator> indicator = MakeShared<LockIndicator>();
-
-		indicator->Initialize(data.CanvasPanel, data.LockBluePrint);
-		indicator->bIsActive = false;
-		indicator->SetActive(true);
-		return indicator;
-	}
+		indicator = MakeShared<LockIndicator>();
+		break;
 	case EWeaponID::FAAM:
-	{
-		TSharedPtr<LockIndicator> indicator = MakeShared<LockIndicator>();
-
-		indicator->Initialize(data.CanvasPanel, data.SpecialLockBluePrint);
-		indicator->bIsActive = true;
-		indicator->SetActive(false);
-		return indicator;
-	}
+		indicator = MakeShared<LockIndicator>();
+		break;
 	case EWeaponID::SAAM:
-	{
-		TSharedPtr<SAAMLockIndicator> indicator = MakeShared<SAAMLockIndicator>();
-
-		indicator->Initialize(data);
-		indicator->bIsActive = true;
-		indicator->SetActive(false);
-		return indicator;
-	}
+		indicator = MakeShared<SAAMLockIndicator>();
+		break;
 	case EWeaponID::UGB:
-	{
-		TSharedPtr<BombIndicator> indicator = MakeShared<BombIndicator>();
-		AUnGuidedBomb* weapon = Cast<AUnGuidedBomb>(data.Weapon);
-
-		indicator->Initialize(data.FCS, data.RangeIndicatorBluePrint, weapon->GetBlastArea());
-		indicator->bIsActive = true;
-		indicator->SetActive(false);
-		return indicator;
-	}
+		indicator = MakeShared<BombIndicator>();
+		break;
 	case EWeaponID::LGB:
-	{
-		TSharedPtr<LockableBombIndicator> indicator = MakeShared<LockableBombIndicator>();
-		AGuidedBomb* weapon = Cast<AGuidedBomb>(data.Weapon);
-
-		indicator->Initialize(data.CanvasPanel, data.SpecialLockBluePrint, data.RangeIndicatorBluePrint, weapon->GetBlastArea());
-		indicator->bIsActive = true;
-		indicator->SetActive(false);
-		return indicator;
-	}
+		indicator = MakeShared<LockableBombIndicator>();
+		break;
 	default:
 		return nullptr;
 	}
 
+	if (indicator == nullptr)
 	return nullptr;
+	indicator->Initialize(data);
+	indicator->bIsActive = data.Weapon->GetWeaponID() != EWeaponID::Standard;
+	indicator->SetActive(false);
+	return indicator;
 }
 
 
+
+void LockIndicator::Initialize(IndicatorCreationData& data)
+{
+	UCanvasPanel* canvasPanel = data.CanvasPanel;
+	TSubclassOf<UUserWidget>& LockBluePrint = data.LockBluePrint;
+	check(canvasPanel);
+
+	LockRectangle = CreateWidget<UUserWidget>(canvasPanel->GetWorld(), LockBluePrint);
+	CanvasSlot = canvasPanel->AddChildToCanvas(LockRectangle);
+	PlayerController = canvasPanel->GetOwningPlayer();
+
+	check(PlayerController.Get());
+	check(LockRectangle);
+	check(CanvasSlot.Get());
+
+	//AnchorPresets.Maximum = AnchorPresets.Minimum = FVector2D(0.5f, 0.5f);
+	//CanvasSlot->SetAnchors(AnchorPresets);
+	CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+	CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+	CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
+	//CanvasSlot->SetZOrder(10);
+}
 
 void LockIndicator::Initialize(UCanvasPanel* canvasPanel, TSubclassOf<UUserWidget>& LockBluePrint)
 {
@@ -166,6 +162,35 @@ void LockIndicator::SetColor(const FLinearColor& color)
 }
 
 
+void BombIndicator::Initialize(IndicatorCreationData& data)
+{
+	TSubclassOf<AActor>& RangeIndicatorBluePrint = data.RangeIndicatorBluePrint;
+	AUnGuidedBomb* weapon = Cast<AUnGuidedBomb>(data.Weapon);
+	double area = weapon->GetBlastArea();
+
+	FCS = data.FCS;
+	RangeIndicator = FCS->GetWorld()->SpawnActor<AActor>(RangeIndicatorBluePrint);
+	check(RangeIndicator);
+	RangeIndicatorUI = static_cast<UWidgetComponent*>(RangeIndicator->GetComponentByClass(UWidgetComponent::StaticClass()));
+	check(RangeIndicatorUI);
+	area *= 2.0;
+	RangeIndicatorUI->SetRelativeScale3D(FVector(1.0, area, area));
+	CalculateBombLandingPosition.BindUObject(FCS.Get(), &UFireControlSystem::CalculateBombLandingPosition);
+
+	auto slot = FCS->GetActivedSpecialSlot();
+
+	for (auto& item : slot->MissileSlot)
+	{
+		auto ugb = Cast<AUnGuidedBomb>(item);
+		if (ugb != nullptr)
+		{
+			ugb->SetBombIndicatorHUD(RangeIndicator);
+			continue;
+		}
+	}
+	SetColor(GreenHUD);
+	SetActive(CalculateBombLandingPosition.IsBound());
+}
 
 void BombIndicator::Initialize(TWeakObjectPtr<UFireControlSystem> fcs, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area)
 {
@@ -238,9 +263,57 @@ void BombIndicator::DisplayExpactPosition()
 }
 
 
+void LockableBombIndicator::Initialize(IndicatorCreationData& data)
+{
+	UCanvasPanel* canvasPanel = data.CanvasPanel;
+	TSubclassOf<class UUserWidget>& LockBluePrint = data.LockBluePrint;
+	TSubclassOf<AActor>& RangeIndicatorBluePrint = data.RangeIndicatorBluePrint;
+	AGuidedBomb* weapon = Cast<AGuidedBomb>(data.Weapon);
+	double area = weapon->GetBlastArea();
+
+	check(canvasPanel);
+
+	UWorld* world = canvasPanel->GetWorld();
+	PlayerController = canvasPanel->GetOwningPlayer();
+	RangeIndicator = world->SpawnActor<AActor>(RangeIndicatorBluePrint);
+	LockRectangle = CreateWidget<UUserWidget>(canvasPanel->GetWorld(), LockBluePrint);
+	check(RangeIndicator);
+	check(LockRectangle);
+
+	CanvasSlot = canvasPanel->AddChildToCanvas(LockRectangle);
+	RangeIndicatorUI = static_cast<UWidgetComponent*>(RangeIndicator->GetComponentByClass(UWidgetComponent::StaticClass()));
+	check(RangeIndicatorUI);
+	check(CanvasSlot.Get());
+
+	area *= 2.0;
+	RangeIndicatorUI->SetRelativeScale3D(FVector(1.0, area, area));
+
+	//AnchorPresets.Maximum = AnchorPresets.Minimum = FVector2D(0.5f, 0.5f);
+	//CanvasSlot->SetAnchors(AnchorPresets);
+	CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+	CanvasSlot->SetAlignment(FVector2D(0.5f, 0.5f));
+	CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
+	//CanvasSlot->SetZOrder(10);
+
+	FCS = data.FCS;
+	auto slot = FCS->GetActivedSpecialSlot();
+
+	for (auto& item : slot->MissileSlot)
+	{
+		auto ugb = Cast<AGuidedBomb>(item);
+		if (ugb != nullptr)
+		{
+			ugb->SetBombIndicatorHUD(RangeIndicator);
+			continue;
+		}
+	}
+
+	SetColor(GreenHUD);
+
+}
 
 
-void LockableBombIndicator::Initialize(class UCanvasPanel* canvasPanel, TSubclassOf<class UUserWidget>& LockBluePrint, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area)
+void LockableBombIndicator::Initialize(TWeakObjectPtr<class UFireControlSystem> fcs, class UCanvasPanel* canvasPanel, TSubclassOf<class UUserWidget>& LockBluePrint, TSubclassOf<AActor>& RangeIndicatorBluePrint, double area)
 {
 	check(canvasPanel);
 
@@ -266,6 +339,7 @@ void LockableBombIndicator::Initialize(class UCanvasPanel* canvasPanel, TSubclas
 	CanvasSlot->SetPosition(FVector2D(0.0f, 0.0f));
 	//CanvasSlot->SetZOrder(10);
 
+	FCS = fcs;
 	auto slot = FCS->GetActivedSpecialSlot();
 
 	for (auto& item : slot->MissileSlot)

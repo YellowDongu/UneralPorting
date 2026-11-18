@@ -126,9 +126,6 @@ void ADebugSpectator::Tick(float DeltaTime)
     if (controller->WasInputKeyJustPressed(EKeys::P))
         CheatDeleteEnemy(GetWorld());
 
-    if (controller->WasInputKeyJustPressed(EKeys::P))
-        CheatDeleteEnemy(GetWorld());
-
     MoveSpeed += (static_cast<double>(controller->IsInputKeyDown(EKeys::MouseScrollUp)) - static_cast<double>(controller->IsInputKeyDown(EKeys::MouseScrollDown))) * MoveSpeed * 0.5 * DeltaTime;
     
     double left = static_cast<double>(controller->IsInputKeyDown(EKeys::Left) || controller->IsInputKeyDown(EKeys::D));

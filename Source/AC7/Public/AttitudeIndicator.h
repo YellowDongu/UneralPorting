@@ -25,25 +25,25 @@ private:
 
 public:
 	//UAttitudeIndicator();
-	virtual void NativePreConstruct() override;
-	virtual void NativeConstruct() override;
+	virtual void NativePreConstruct(void) override;
+	virtual void NativeConstruct(void) override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float DeltaTime) override;
+
 	void BindPlayer(class AAircraft* vehicle, class APlayerPilot* player);
+	void InitializeHUD(void);
 
-	void NativeTick(const FGeometry& MyGeometry, float DeltaTime);
-
-	TObjectPtr<class UPitchBar> AddPitchBar(int pitchLevel, bool back = true);
-	TObjectPtr<class UPitchBar> Get(PitchFlag flag);
-	void Release(const TObjectPtr<class UPitchBar>& ui, PitchFlag flag);
-
-	FORCEINLINE int FlagConvert(PitchFlag flag);
+	void ChangeColor(FLinearColor color);
 
 	DECLARE_DELEGATE_RetVal(FRotator, FGetEularAngle);
 	FGetEularAngle GetEularAngle;
 
-
-	void ChangeColor(FLinearColor color);
-
 private:
+	TObjectPtr<class UPitchBar> AddPitchBar(int pitchLevel, bool back = true);
+	TObjectPtr<class UPitchBar> Get(PitchFlag flag);
+	void Release(const TObjectPtr<class UPitchBar>& ui, PitchFlag flag);
+	FORCEINLINE int FlagConvert(PitchFlag flag);
+
+
 	bool bBinded{ false }, bInitialized{ false };
 	float MaxHeight{ 200.0f }, PitchSpace{ 2.5f }, Space{ 0.0f };
 	int HalfHeight{ 4 }, Pitch{ 0 };
@@ -51,7 +51,7 @@ private:
 	TArray<TPair<TObjectPtr<class UPitchBar>, PitchFlag>> Alive;
 	TArray<TObjectPtr<class UPitchBar>> Pool[4];
 
-	FLinearColor currentColor{ FLinearColor::White };
+	FLinearColor CurrentColor{ FLinearColor::White };
 
 	//UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	//class UTextBlock* Text{nullptr};

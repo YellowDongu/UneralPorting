@@ -187,35 +187,37 @@ void UMainMenuUI::TransitLevel(void)
 	if (levelName.IsEmpty())
 		return;
 
-	UE_LOG(LogTemp, Error, TEXT("[UMainMenuUI::Select] ChangeLevel to %s"), *levelName);
-	stageChangeUIUnit->FadeOut(true, 2.5f);
-
+	UE_LOG(LogTemp, Error, TEXT("[UMainMenuUI::TransitLevel] %s Level reserved"), *levelName);
 	gameMaster->ReserveLevel(levelName);
+	stageChangeUIUnit->FadeOut(true, 2.5f);
+	Deactive();
 
 	TArray<FSoftObjectPath> pathList;
 	pathList.Reserve(vehicleCount);
 
-	for (int i = 1; i < static_cast<int>(EVehicleID::AirEND); i++)
+	for (int i = static_cast<int>(EVehicleID::Aircraft) + 1; i < static_cast<int>(EVehicleID::AirEND); i++)
 	{
 		TSubclassOf<AVehicleBase> bluePrint = bluePrintCollector->GetVehicleBluePrint(static_cast<EVehicleID>(i));
-		if (bluePrint != nullptr)
+		if (bluePrint)
 			pathList.Emplace(bluePrint.Get());
 	}
 
 	for (int i = static_cast<int>(EVehicleID::Ground) + 1; i < static_cast<int>(EVehicleID::GroundEND); i++)
 	{
 		TSubclassOf<AVehicleBase> bluePrint = bluePrintCollector->GetVehicleBluePrint(static_cast<EVehicleID>(i));
-		if (bluePrint != nullptr)
+		if (bluePrint)
 			pathList.Emplace(bluePrint.Get());
 	}
 
+
 	levelLoader->AssetAsyncLoad(TEXT("VehicleSet"), pathList, true);
 	levelLoader->AssetAsyncLoad(TEXT("SelectLevel"), gameMaster->GetReserveLevel().ToSoftObjectPath(), true);
-	stageChangeUIUnit->ExitSelect(UStageChangeUIUnit::FCallBackFunction::FDelegate::CreateWeakLambda(this, [levelLoader, bluePrintCollector]() -> void
-																									 {
-																										 levelLoader->ChangeLevel(bluePrintCollector->GetSelectLevel());
-																										 levelLoader->Unload(TEXT("SelectLevel")); // 나중에 따로 언로드하지 않게 앵커를 없애서 레벨 전환이 되면 자연스럽게 없어지게 하도록
-																									 }));
+	stageChangeUIUnit->ExitSelect(UStageChangeUIUnit::FCallBackFunction::FDelegate::CreateWeakLambda(
+		this, [levelLoader, bluePrintCollector]() -> void
+		{
+			levelLoader->ChangeLevel(bluePrintCollector->GetSelectLevel());
+			levelLoader->Unload(TEXT("SelectLevel")); // 나중에 따로 언로드하지 않게 앵커를 없애서 레벨 전환이 되면 자연스럽게 없어지게 하도록
+		}));
 }
 
 void UMainMenuUI::Active(void)

@@ -26,7 +26,318 @@ void UStageChangeUIUnit::NativeConstruct()
 	MissionSuccessPanel->SetVisibility(ESlateVisibility::Hidden);
 	bIsFadeOut = true;
 	FadeOut(false);
+
+	InterSelect();
+	InterMission();
+	ExitSelect();
+	StartSelectLevel();
 }
+
+
+void UStageChangeUIUnit::InterSelect(void)
+{
+	auto& sequence = Sequences.FindOrAdd(TEXT("InterSelect"));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			MissionPanel->SetVisibility(ESlateVisibility::Visible);
+			MissionText->SetVisibility(ESlateVisibility::Visible);
+
+			MissionLoadingPanel->SetVisibility(ESlateVisibility::Hidden);
+			MainText->SetVisibility(ESlateVisibility::Hidden);
+			SubText->SetVisibility(ESlateVisibility::Hidden);
+
+			FadeOut(true);
+			LoadingCanvas->SetVisibility(ESlateVisibility::Visible);
+			FadeOut(false, 0.5f);
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::InterSelect] Phase 1"));
+			return true;
+		}));
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::InterSelect] Phase 2"));
+			return true;
+		}));
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (accumulatedTime <= 5.0f)
+				return false;
+
+			FadeOut(true, 0.5f);
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::InterSelect] Phase 3"));
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			FadeOut(false, 0.5f);
+			LoadingCanvas->SetVisibility(ESlateVisibility::Hidden);
+			CallBack.Broadcast();
+			CallBack.Clear();
+
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::InterSelect] Phase 4"));
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::InterSelect] Phase END"));
+			return true;
+		}));
+}
+
+void UStageChangeUIUnit::InterMission(void)
+{
+	static FString functionName = TEXT("EnterMission");
+	auto& sequence = Sequences.FindOrAdd(functionName);
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			MissionPanel->SetVisibility(ESlateVisibility::Hidden);
+			MissionText->SetVisibility(ESlateVisibility::Hidden);
+
+			MissionLoadingPanel->SetVisibility(ESlateVisibility::Visible);
+			MainText->SetVisibility(ESlateVisibility::Visible);
+			SubText->SetVisibility(ESlateVisibility::Visible);
+
+			UGameMaster* gameMaster = GetGameInstance<UGameMaster>();
+			FStreamableDelegate delegate = FStreamableDelegate::CreateUObject(this, &UStageChangeUIUnit::GetLoadingEndFlag);
+			gameMaster->ReserveLevel(FString(TEXT("MS01")));
+			gameMaster->GetSubsystem<ULevelLoader>()->AssetAsyncLoad(TEXT("MissionLevel"), gameMaster->GetReserveLevel().ToSoftObjectPath(), true, delegate);
+
+			FadeOut(true, 0.5f);
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			LoadingCanvas->SetVisibility(ESlateVisibility::Visible);
+			FadeOut(false, 0.5f);
+
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			return !FadeOutTimerHandle.IsValid();
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			static float LoadingTime = 10.0f;
+			if (!bLoadingEndFlag || accumulatedTime <= LoadingTime)
+				return false;
+
+			FadeOut(true, 0.5f);
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			//GetWorld()->GetTimerManager().ClearTimer(InterSelectHandle);
+			LoadingCanvas->SetVisibility(ESlateVisibility::Hidden);
+			UGameMaster* gameMaster = GetGameInstance<UGameMaster>();
+			gameMaster->ChangeReservedLevel();
+			ActivedFunction.Remove(functionName);
+			return true;
+		}));
+}
+
+void UStageChangeUIUnit::ExitSelect(void)
+{
+	static FString functionName = TEXT("ExitSelect");
+	auto& sequence = Sequences.FindOrAdd(functionName);
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			MissionPanel->SetVisibility(ESlateVisibility::Visible);
+			MissionText->SetVisibility(ESlateVisibility::Visible);
+
+			MissionLoadingPanel->SetVisibility(ESlateVisibility::Hidden);
+			MainText->SetVisibility(ESlateVisibility::Hidden);
+			SubText->SetVisibility(ESlateVisibility::Hidden);
+
+			FadeOut(true, 0.5f);
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			LoadingCanvas->SetVisibility(ESlateVisibility::Visible);
+			FadeOut(false, 0.5f);
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (accumulatedTime <= 5.0f)
+				return false;
+
+			FadeOut(true, 0.5f);
+			return true;
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			LoadingCanvas->SetVisibility(ESlateVisibility::Hidden);
+			//GetWorld()->GetTimerManager().ClearTimer(InterSelectHandle);
+
+			ActiveCallBack(functionName);
+			ActivedFunction.Remove(functionName);
+			return true;
+		}));
+}
+
+void UStageChangeUIUnit::StartSelectLevel(void)
+{
+	static FString functionName = TEXT("EnterSelect");
+	auto& sequence = Sequences.FindOrAdd(functionName);
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			LoadingCanvas->SetVisibility(ESlateVisibility::Hidden);
+			FadeOut(true);
+			FadeOut(false, 0.5f);
+			return true;
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::StartSelectLevel] Phase 1"));
+		}));
+
+	sequence.AddSequence(FSequenceTask::FSequenceFunction::CreateWeakLambda(
+		this, [this](float accumulatedTime)->bool
+		{
+			if (FadeOutTimerHandle.IsValid())
+				return false;
+
+			ActiveCallBack(functionName);
+			ActivedFunction.Remove(functionName);
+			UE_LOG(LogTemp, Warning, TEXT("[UStageChangeUIUnit::StartSelectLevel] Phase END"));
+			//GetWorld()->GetTimerManager().ClearTimer(InterSelectHandle);
+			return true;
+		}));
+}
+
+
+
+void UStageChangeUIUnit::EnterSelect(const FCallBackFunction::FDelegate& CallBackDelegate)
+{
+	static FString functionName = TEXT("EnterSelect");
+	if (ActivedFunction.Contains(functionName))
+		return;
+
+	ActivedFunction.Add(functionName);
+	CallBacks.FindOrAdd(functionName).Add(CallBackDelegate);
+	//if (InterSelectHandle.IsValid())
+	//	return;
+
+	//TickFunctions.Add([this, phase = 0, phaseTime = 0.0f](float deltaTime) mutable -> bool { return StartSelectLevel(phase, phaseTime); });
+	//return;
+
+	auto sequence = Sequences.Find(functionName);
+	if (sequence == nullptr)
+		return;
+
+	TickFunctions.Add([this, sequence](float deltaTime) -> bool { sequence->Update(deltaTime); return sequence->SequenceList.Num() <= sequence->currentIndex; });
+}
+
+void UStageChangeUIUnit::EnterMission()
+{
+	static FString functionName = TEXT("EnterMission");
+	if (ActivedFunction.Contains(functionName))
+		return;
+
+	ActivedFunction.Add(functionName);
+	//if (InterSelectHandle.IsValid())
+	//	return;
+
+	bLoadingEndFlag = false;
+	FadeOut(true);
+
+	//TickFunctions.Add([this, phase = 0, phaseTime = 0.0f](float deltaTime) mutable -> bool { return InterMission(phase, phaseTime, deltaTime); });
+	//GetWorld()->GetTimerManager().SetTimer(InterSelectHandle, this, &UStageChangeUIUnit::InterMission, timerDeltaTime, true);
+
+	auto sequence = Sequences.Find(functionName);
+	if (sequence == nullptr)
+		return;
+
+	TickFunctions.Add([this, sequence](float deltaTime) -> bool { sequence->Update(deltaTime); return sequence->SequenceList.Num() <= sequence->currentIndex; });
+}
+
+void UStageChangeUIUnit::ExitSelect(const FCallBackFunction::FDelegate& CallBackDelegate)
+{
+	static FString functionName = TEXT("ExitSelect");
+	if (ActivedFunction.Contains(functionName))
+		return;
+
+	const FString& name = GetGameInstance<UGameMaster>()->GetReserveLevelName();
+	if (!name.IsEmpty())
+	{
+		FText text = FText::FromString(name);
+		MissionText->SetText(text);
+		MainText->SetText(text);
+	}
+
+	ActivedFunction.Add(functionName);
+	CallBacks.FindOrAdd(functionName).Add(CallBackDelegate);
+
+	//if (InterSelectHandle.IsValid())
+	//	return;
+
+	//TickFunctions.Add([this, phase = 0, phaseTime = 0.0f](float deltaTime) mutable -> bool { return ExitSelect(phase, phaseTime, deltaTime); });
+	//GetWorld()->GetTimerManager().SetTimer(InterSelectHandle, this, &UStageChangeUIUnit::ExitSelect, timerDeltaTime, true);
+	auto sequence = Sequences.Find(functionName);
+	if (sequence == nullptr)
+		return;
+
+	TickFunctions.Add([this, sequence](float deltaTime) -> bool { sequence->Update(deltaTime); return sequence->SequenceList.Num() <= sequence->currentIndex; });
+}
+
+
+
 
 void UStageChangeUIUnit::NativeTick(const FGeometry& MyGeometry, float DeltaTime)
 {
@@ -200,6 +511,7 @@ bool UStageChangeUIUnit::InterSelect(int& phase, float& phaseTime)
 	return false;
 }
 
+
 bool UStageChangeUIUnit::ExitSelect(int& phase, float& phaseTime, float deltaTime)
 {
 	static FString functionName = TEXT("ExitSelect");
@@ -342,57 +654,6 @@ bool UStageChangeUIUnit::InterMission(int& phase, float& phaseTime, float deltaT
 		break;
 	}
 	return false;
-}
-
-void UStageChangeUIUnit::EnterMission()
-{
-	static FString functionName = TEXT("EnterMission");
-	if (ActivedFunction.Contains(functionName))
-		return;
-
-	ActivedFunction.Add(functionName);
-	//if (InterSelectHandle.IsValid())
-	//	return;
-
-	bLoadingEndFlag = false;
-	FadeOut(true);
-
-	TickFunctions.Add([this, phase = 0, phaseTime = 0.0f](float deltaTime) mutable -> bool { return InterMission(phase, phaseTime, deltaTime); });
-	//GetWorld()->GetTimerManager().SetTimer(InterSelectHandle, this, &UStageChangeUIUnit::InterMission, timerDeltaTime, true);
-}
-
-void UStageChangeUIUnit::ExitSelect(const FCallBackFunction::FDelegate& CallBackDelegate)
-{
-	static FString functionName = TEXT("ExitSelect");
-	if (ActivedFunction.Contains(functionName))
-		return;
-
-	ActivedFunction.Add(functionName);
-	CallBacks.FindOrAdd(functionName).Add(CallBackDelegate);
-
-	//if (InterSelectHandle.IsValid())
-	//	return;
-
-	TickFunctions.Add([this, phase = 0, phaseTime = 0.0f](float deltaTime) mutable -> bool { return ExitSelect(phase, phaseTime, deltaTime); });
-	//GetWorld()->GetTimerManager().SetTimer(InterSelectHandle, this, &UStageChangeUIUnit::ExitSelect, timerDeltaTime, true);
-}
-
-void UStageChangeUIUnit::EnterSelect(const FCallBackFunction::FDelegate& CallBackDelegate)
-{
-	static FString functionName = TEXT("EnterSelect");
-	if (ActivedFunction.Contains(functionName))
-		return;
-
-	ActivedFunction.Add(functionName);
-	CallBacks.FindOrAdd(functionName).Add(CallBackDelegate);
-	//if (InterSelectHandle.IsValid())
-	//	return;
-
-	FadeOut(true);
-
-	TickFunctions.Add([this, phase = 0, phaseTime = 0.0f](float deltaTime) mutable -> bool { return StartSelectLevel(phase, phaseTime); });
-
-	//GetWorld()->GetTimerManager().SetTimer(InterSelectHandle, this, &UStageChangeUIUnit::StartSelectLevel, timerDeltaTime, true);
 }
 
 void UStageChangeUIUnit::FadeOut(bool active, float fadeoutTime)

@@ -37,6 +37,11 @@ public:
 	void RemoveCallBack(FDelegateHandle Handle) { CallBack.Remove(Handle); }
 
 private:
+	void InterSelect(void);
+	void InterMission(void);
+	void ExitSelect(void);
+	void StartSelectLevel(void);
+
 	bool StartSelectLevel(int& phase, float& phaseTime);
 	bool InterMission(int& phase, float& phaseTime, float deltaTime);
 	bool InterSelect(int& phase, float& phaseTime);
@@ -53,7 +58,9 @@ private:
 
 	FTimerHandle FadeOutTimerHandle; // 핸들을 하나로 합쳐야됨
 	FTimerHandle InterSelectHandle;
+	FSequenceTask Sequence;
 	FCallBackFunction CallBack;
+	TMap<FString, FSequenceTask> Sequences;
 	TMap<FString, FCallBackFunction> CallBacks;
 	TArray<TFunction<bool(float)>> TickFunctions;
 	TSet<FString> ActivedFunction;

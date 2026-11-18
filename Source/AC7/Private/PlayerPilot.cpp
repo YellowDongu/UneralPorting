@@ -56,7 +56,16 @@ void APlayerPilot::BeginPlay(void)
     StaticCast<USoundWave*>(GunSoundSet->Sound)->bLooping = true;
 
     EngineSoundSet = MakeShared<FSoundSet>();
-    EngineSoundSet->Channel = Aircraft->FindComponentByClass<UAudioComponent>();
+    UAudioComponent* engineAudio = Aircraft->FindComponentByClass<UAudioComponent>();
+    if (engineAudio == nullptr)
+    {
+        engineAudio = NewObject<UAudioComponent>(Aircraft.Get(), TEXT("EngineAudio"));
+        engineAudio->bAutoActivate = false;
+        engineAudio->SetupAttachment(Aircraft->GetRootComponent());
+        engineAudio->RegisterComponent();
+        Aircraft->AddInstanceComponent(engineAudio);
+    }
+    EngineSoundSet->Channel = engineAudio;
     EngineSoundSet->ChangeSound(soundSubsystem->GetSound(TEXT("Engine_Outside")));
     StaticCast<USoundWave*>(EngineSoundSet->Sound)->bLooping = true;
     EngineSoundSet->FloatValue = 1.0f;

@@ -46,7 +46,7 @@ private:
 	bool bIsStarted{ false };
 	FTimerManager* Timer{ nullptr };
 	FTimerHandle Handle;
-	float Time;
+	float Time{ 0 };
 };
 
 class AC7_API UTGTCondition : public USpawnCondition
@@ -145,7 +145,7 @@ private:
 	ESpawnConditionType SpawnCondition{ ESpawnConditionType::END };
 
 	UPROPERTY(EditAnywhere, Category = "Conditions", meta = (AllowPrivateAccess = "true", EditCondition = "SpawnCondition == ESpawnConditionType::Time", EditConditionHides))
-	float Timer;
+	float Timer{ 0.0f };
 
 	UPROPERTY(EditAnywhere, Category = "ActiveBehavior", meta = (AllowPrivateAccess = "true"))
 	TArray<FSpawnInfomation> list;

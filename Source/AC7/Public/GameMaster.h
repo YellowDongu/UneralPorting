@@ -23,9 +23,12 @@ public:
 	virtual void Shutdown(void) override;
 
 	FString GetMissionName(int index);
-	TSoftObjectPtr<UWorld> GetReserveLevel(void) { return ReservedLevel; }
+
+	TSoftObjectPtr<UWorld> GetReserveLevel(void) const { return ReservedLevel; }
+	const FString& GetReserveLevelName(void) const { return ReservedLevelName; }
 	void ReserveLevel(const FString& nextLevel);
 	void ReserveLevel(const TSoftObjectPtr<UWorld>& nextLevel) { ReservedLevel = nextLevel; }
+
 	void CancelReservationLevel(void) { ReservedLevel = nullptr; }
 	TSoftObjectPtr<UWorld> FindMissionLevel(int index);
 	TSoftObjectPtr<UWorld> FindMissionLevel(const FString& name);
@@ -49,5 +52,6 @@ private:
 	TSubclassOf<class UBluePrintCollector> CollectorBluePrint;
 	UPROPERTY() TObjectPtr<class UBluePrintCollector> Collector;
 
+	FString ReservedLevelName;
 	TSoftObjectPtr<UWorld> ReservedLevel{ nullptr };
 };

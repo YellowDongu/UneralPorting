@@ -45,10 +45,11 @@ void UBluePrintCollector::PostInitProperties()
 {
 	Super::PostInitProperties();
 
-	for (auto& item : Levels)
+	for (auto& item : LevelList)
 	{
-		if (!item) continue;
-		FLevelInfo levelInfo(item);
+		if (item.LevelPtr.IsNull()) continue;
+		FLevelInfo levelInfo;
+		levelInfo.SetData(item);
 		LevelInfomation.Add(levelInfo.LevelName, levelInfo);
 	}
 
@@ -129,7 +130,7 @@ void UBluePrintCollector::GetManeuverData(const FString& name, TArray<FWaypointD
 	output.Reset();
 
 	const TSoftObjectPtr<class UMovementPathAsset>* asset = ManeuverAssets.Find(name);
-	if (asset == nullptr)
+	if (asset == nullptr || asset->IsNull())
 	{
 		UE_LOG(LogTemp, Error, TEXT("[UBluePrintCollector::GetManeuverData] Asset Not Found : %s"), *name);
 		return;

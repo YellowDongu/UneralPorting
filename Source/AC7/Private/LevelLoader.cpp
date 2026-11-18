@@ -173,7 +173,7 @@ void ULevelLoader::AssetAsyncLoad(const FString& handleName, const TArray<FSoftO
 
                           if (assetsToLoad.IsEmpty())
                           {
-                              delegate.Execute();
+                              delegate.ExecuteIfBound();
                               return;
                           }
 

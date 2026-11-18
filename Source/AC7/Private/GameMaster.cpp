@@ -43,7 +43,15 @@ void UGameMaster::Shutdown()
 }
 
 void UGameMaster::ChangeLevel(const FName& levelName) { GetSubsystem<ULevelLoader>()->ChangeLevel(levelName); }
-void UGameMaster::ReserveLevel(const FString& nextLevel) { ReservedLevel = GetCollector()->GetMissionLevel(nextLevel); }
+void UGameMaster::ReserveLevel(const FString& nextLevel)
+{
+    ReservedLevelName.Reset();
+    auto level = GetCollector()->GetMissionLevelData(nextLevel);
+    if (level == nullptr) return;
+    ReservedLevel = level->LevelPtr;
+    if (!ReservedLevel.IsNull())
+        ReservedLevelName = level->LevelLabel;
+}
 USoundBase* UGameMaster::GetSoundBluePrint(const FString& bgmName) { return GetCollector()->GetSound(bgmName); }
 
 FString UGameMaster::GetMissionName(int index) { return GetCollector()->GetMissionLevelName(index); }
