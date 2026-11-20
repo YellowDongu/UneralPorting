@@ -101,13 +101,14 @@ void AFlare::Shoot(USceneComponent* flarePod, const FVector& DirectionVector)
 	const FTransform& WorldTransform = flarePod->GetComponentTransform();
 	SetActorTransform(WorldTransform);
 
-    //double velocity = FMath::Max(DirectionVector.Length(), 1.0);
+    double velocity = FMath::Max(DirectionVector.Length(), 1.0);
     SetActorEnableCollision(true);
     SetActorHiddenInGame(false);
     SetActorTickEnabled(true);
     Body->SetVisibility(true);
 
-	CurrentVelocity = FMath::VRandCone(GetActorForwardVector(), FMath::DegreesToRadians(15.0f)) * ConvertFromVelocity(50.0);
+	//CurrentVelocity = FMath::VRandCone(GetActorForwardVector(), FMath::DegreesToRadians(15.0f)) * velocity;
+    CurrentVelocity = FMath::VRandCone(DirectionVector.GetSafeNormal(), FMath::DegreesToRadians(15.0f)) * velocity;
 
     if (!DirectionVector.IsZero())
     {
@@ -118,4 +119,29 @@ void AFlare::Shoot(USceneComponent* flarePod, const FVector& DirectionVector)
 
     CurrentLifeTime = LifeTime;
 	HP = TNumericLimits<int>::Max();
+}
+
+void AFlare::Shoot(AVehicleBase* shooter, USceneComponent* flarePod, float velocity)
+{
+    const FTransform& WorldTransform = flarePod->GetComponentTransform();
+    SetActorTransform(WorldTransform);
+
+    FVector DirectionVector = shooter->GetActorForwardVector() * velocity + flarePod->GetForwardVector() * ConvertFromVelocity(98.0f * 2.5f);
+    SetActorEnableCollision(true);
+    SetActorHiddenInGame(false);
+    SetActorTickEnabled(true);
+    Body->SetVisibility(true);
+
+    //CurrentVelocity = FMath::VRandCone(GetActorForwardVector(), FMath::DegreesToRadians(15.0f)) * velocity;
+    CurrentVelocity = FMath::VRandCone(DirectionVector.GetSafeNormal(), FMath::DegreesToRadians(15.0f)) * FMath::Max(DirectionVector.Length(), 1.0);
+
+    if (!DirectionVector.IsZero())
+    {
+        CurrentVelocity += DirectionVector;
+        SetActorRotation(CurrentVelocity.Rotation().Quaternion());
+        ShootSpeed = DirectionVector.Length();
+    }
+
+    CurrentLifeTime = LifeTime;
+    HP = TNumericLimits<int>::Max();
 }

@@ -3,7 +3,7 @@
 
 #include "DisplayCase.h"
 #include "GameMaster.h"
-#include "BlueprintCollector.h"
+#include "BluePrintCollector.h"
 #include "Aircraft.h"
 #include "AircraftAnimator.h"
 

@@ -118,7 +118,6 @@ void UFireControlSystem::Update(float DeltaTime)
 	else
 	{
 		standard[0]->Lock(currentTargets[0], DeltaTime, forward, position);
-		UE_LOG(LogTemp, Warning, TEXT("[UFireControlSystem::Update] %.3f"), currentTargets[0].Lock);
 		//FVector direction = currentTargets[0].Target->GetActorLocation() - position;
 		//float distance = standard[0]->GetMaxRange();
 		//

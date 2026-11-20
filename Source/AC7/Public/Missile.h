@@ -18,7 +18,6 @@ public:
 
     void TrackEnemy(float deltaTime);
 
-
     virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked, AMissile*& output); // return false at cooltime
     virtual bool Shoot(TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked); // return false at cooltime
     virtual void Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> owner, TWeakObjectPtr<class AVehicleBase> locked);
@@ -54,8 +53,8 @@ public:
    // public GaugeUI.GaugeUIType NeededUIType = > neededUI;
 protected:
     bool bIsCoolTime{ false }, bIsProjectile{ false };
-    float Time{ 0.0f }, DistanceSquare{ 0.0f }, AngleCos{ 0.0f }, FlyDistance{ TNumericLimits<float>::Max() };
-    double ImpactDistance{ 500.0 }; // squared at runtime
+    float Time{ 0.0f }, DistanceSquare{ 0.0f }, AngleCos{ 0.0f }, FlyDistance{ TNumericLimits<float>::Max() }, AgilityTimer{ 0.0f };
+    double ImpactDistance{ 250.0 }; // squared at runtime
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     EWeaponID MissileID{ EWeaponID::NULLID };
@@ -75,6 +74,10 @@ protected:
     float lockAngle = 45.0f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     float lockSpeed = 1.0f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
+    float AgilityBonus = 3.0f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
+    float AgilityBonusTime{ 1.0f };
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     int MultiShoot = 1;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))

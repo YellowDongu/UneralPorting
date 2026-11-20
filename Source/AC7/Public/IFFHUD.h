@@ -64,6 +64,8 @@ private:
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	class UTextBlock* TGTText{ nullptr };
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
+	class UTextBlock* ALLYText{ nullptr };
+	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	class UTextBlock* DistanceText{ nullptr };
 	UPROPERTY(EditAnywhere, meta = (BindWidget, AllowPrivateAccess = "true"))
 	class UTextBlock* TypeNameText{ nullptr };

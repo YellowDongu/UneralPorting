@@ -29,6 +29,7 @@ void AStandardMissile::Tick(float DeltaTime)
         return;
     }
 
+    AgilityTimer = FMath::Min(AgilityTimer + DeltaTime, AgilityBonusTime);
     float distance = ConvertFromVelocity(velocity) * DeltaTime;
     FlyDistance -= distance;
 
@@ -62,7 +63,7 @@ void AStandardMissile::Tick(float DeltaTime)
         Release();
     }
     else
-        SetActorRotation(FMath::RInterpTo(CurrentRotation, vector.Rotation(), DeltaTime, rotationSpeed));
+        SetActorRotation(FMath::RInterpTo(CurrentRotation, vector.Rotation(), DeltaTime, rotationSpeed * FMath::Lerp(AgilityBonus, 1.0f, AgilityTimer / AgilityBonusTime)));
 }
 
 void AStandardMissile::Release()

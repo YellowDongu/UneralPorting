@@ -1,13 +1,13 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "GameMaster.h"
+
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
+
 #include "PlayerPilot.h"
 #include "LevelLoader.h"
 #include "BluePrintCollector.h"
-#include "Kismet/GameplayStatics.h"
-#include "Components/AudioComponent.h"
 #include "UIHandler.h"
+#include "DebugSettings.h"
 
 UGameMaster::UGameMaster() : UGameInstance()
 {
@@ -17,9 +17,6 @@ void UGameMaster::Init()
 {
     Super::Init();
     GetCollector();
-
-    PlayerSpawnInfomation.VehicleID = EVehicleID::F15E;
-    PlayerSpawnInfomation.SpecialWeapon = EWeaponID::END;
 }
 
 const TObjectPtr<UBluePrintCollector>& UGameMaster::GetCollector()
@@ -62,11 +59,17 @@ void UGameMaster::OnStart()
 {
     Super::OnStart();
 
-	PlayerSpawnInfomation.VehicleID = EVehicleID::F15E;
-	//PlayerSpawnInfomation.SpecialWeaponIndex = 2;
-
-    //PlayerSpawnInfomation.VehicleID = EVehicleID::F14D;
-    PlayerSpawnInfomation.SpecialWeapon = EWeaponID::UGB;
+    const UDebugSettings* debugSetting = GetDefault<UDebugSettings>();
+    if (debugSetting != nullptr && debugSetting->bAircraftDebugMode)
+    {
+        PlayerSpawnInfomation.VehicleID = debugSetting->Vehicle;
+        PlayerSpawnInfomation.SpecialWeapon = debugSetting->SpecialWeapon;
+    }
+    else
+    {
+        PlayerSpawnInfomation.VehicleID = EVehicleID::F15E;
+        PlayerSpawnInfomation.SpecialWeapon = EWeaponID::END;
+    }
 }
 
 #include "Camera/CameraComponent.h"

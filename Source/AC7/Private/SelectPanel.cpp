@@ -230,11 +230,6 @@ void USelectPanel::EnterStage(void)
 	info.VehicleID = (*SelectableVehicleList)[VehicleListController.GetCurrentIndex()]->GetVehicleID();
 	info.SpecialWeapon = weapon.IsValid() ? weapon->GetWeaponID() : EWeaponID::END;
 
-	// DEBUG/SAFEMODE
-	//info.VehicleID = EVehicleID::F15E;
-	//info.SpecialWeaponIndex = -1;
-	//gameMaster->ReserveLevel(FString(TEXT("MS01")));
-
 	if (gameMaster->GetReserveLevel().IsNull())
 	{
 		UE_LOG(LogTemp, Error, TEXT("[ERROR] No level selected, Select Default Level"));

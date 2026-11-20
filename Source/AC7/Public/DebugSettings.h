@@ -23,4 +23,13 @@ public:
     float shortDuration = 3;
     UPROPERTY(EditAnywhere, Config, Category = "SoundDebug")
     float longDuration = 1.5;
+
+
+    UPROPERTY(EditAnywhere, Config, Category = "AircraftDebug")
+    bool bAircraftDebugMode = false;
+    UPROPERTY(EditAnywhere, Config, Category = "AircraftDebug")
+    EVehicleID Vehicle = EVehicleID::END;
+    UPROPERTY(EditAnywhere, Config, Category = "AircraftDebug")
+    EWeaponID SpecialWeapon = EWeaponID::END;
+
 };

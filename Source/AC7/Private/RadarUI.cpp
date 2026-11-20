@@ -10,6 +10,7 @@
 #include "PlayerPilot.h"
 #include "RadarTargetUI.h"
 #include "SoundSubsystem.h"
+#include "ObjectFactory.h"
 
 FVector URadarUI::LeftBottomBoarder{ FVector::ZeroVector };
 FVector URadarUI::RightTopBoarder{ FVector::OneVector };
@@ -46,6 +47,32 @@ void URadarUI::Refresh(float DeltaTime)
 
 	if (bIsExpended)
 	{
+		const TArray<TSet<TWeakObjectPtr<class AVehicleBase>>>& vehicle = GetWorld()->GetSubsystem<UObjectFactory>()->GetAllVehicle();
+
+		for (auto& set : vehicle)
+		{
+			for (auto& item : set)
+			{
+				if (!IsAlive(item))
+					continue;
+
+				if (i < Alive.Num())
+					targetUI = Alive[i];
+				else
+				{
+					Alive.Add(GetTargetUI(CurrentCanvas));
+					targetUI = Alive.Last();
+				}
+
+				FVector relatedPosition = item->GetActorLocation() - LeftBottomBoarder;
+				relatedPosition.X = relatedPosition.X / (RightTopBoarder.X - LeftBottomBoarder.X) * LargeRadarSize.X - LargeRadarSize.X * 0.5;
+				relatedPosition.Y = relatedPosition.Y / (RightTopBoarder.Y - LeftBottomBoarder.Y) * LargeRadarSize.Y - LargeRadarSize.Y * 0.5;
+
+				targetUI->Update(FVector2D(relatedPosition.Y, -relatedPosition.X), 0.0f, item.Get());
+				i++;
+			}
+		}
+		/*
 		for (TActorIterator<AVehicleBase> iterator(Player->GetWorld()); iterator; ++iterator, i++)
 		{
 			if (i < Alive.Num())
@@ -80,6 +107,7 @@ void URadarUI::Refresh(float DeltaTime)
 
 			targetUI->Update(FVector2D(relatedPosition.Y, -relatedPosition.X), 0.0f, target);
 		}
+		*/
 
 		if (i < Alive.Num())
 		{

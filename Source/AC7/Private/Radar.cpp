@@ -164,7 +164,6 @@ void URadar::DeployFlare()
 	{
 		auto& item = flarePod[i];
 		TWeakObjectPtr<AFlare> newInstance = objectFactory->GetFlare(owner, item.Get(), velocity);
-
 		const int Length = BaseCount + (i < Remainder ? 1 : 0);
 
 		for (int j = 0; j < Length; ++j)

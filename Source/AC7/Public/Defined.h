@@ -381,7 +381,11 @@ public:
 			Rotation = SpawnNode->GetActorRotation();
 		}
 
+		if (bPlaceLowestStaticMesh)
+			Position = (spawner->GetWorld(), Position);
 	}
+
+	static FVector CalculateFloor(UWorld* World, const FVector& Position, const FCollisionQueryParams& Params = FCollisionQueryParams());
 
 	const FVector& GlobalPosition() const { return Position; }
 	const FRotator& GlobalRotation() const { return Rotation; }
@@ -401,11 +405,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vehicle", meta = (AllowPrivateAccess = "true"))
 	EVehicleID VehicleID{ EVehicleID::END };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vehicle", meta = (AllowPrivateAccess = "true"))
+	EWeaponID SpecialWeapon{ false };
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vehicle", meta = (AllowPrivateAccess = "true"))
 	bool IsTGT{ false };
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vehicle", meta = (AllowPrivateAccess = "true"))
 	bool bIsInvincible{ false };
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vehicle", meta = (AllowPrivateAccess = "true"))
-	int SpecialWeapon{ false };
+	UPROPERTY(EditAnywhere, Category = "Conditions", meta = (AllowPrivateAccess = "true", EditCondition = "SpawnCondition == ESpawnConditionType::Time", EditConditionHides))
+	bool bPlaceLowestStaticMesh{ false };
 
 	const FPlayerSpawnInfomation* playerInfoPointer{ nullptr };
 

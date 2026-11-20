@@ -30,6 +30,7 @@ void UIFFHUD::StartTrack(AVehicleBase* vehicle, AAircraft* player, UCanvasPanelS
 
 	bool ally = player->GetTeam() == vehicle->GetTeam();
 
+	SetVisibility(ESlateVisibility::Visible);
 	Air->SetVisibility(ESlateVisibility::Hidden);
 	Air_NG->SetVisibility(ESlateVisibility::Hidden);
 
@@ -49,11 +50,21 @@ void UIFFHUD::StartTrack(AVehicleBase* vehicle, AAircraft* player, UCanvasPanelS
 
 	TypeNameText->SetText(FText::FromString(TargetVehicle->GetVehicleName()));
 	Active(true);
-	TGTText->SetVisibility(vehicle->IsTGT() ? (ally ? ESlateVisibility::Hidden : ESlateVisibility::Visible) : ESlateVisibility::Hidden);
+
+	if (ally)
+	{
+		ALLYText->SetVisibility(ESlateVisibility::Visible);
+		TGTText->SetVisibility(ESlateVisibility::Hidden);
+		TypeNameText->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		ALLYText->SetVisibility(ESlateVisibility::Hidden);
+		TGTText->SetVisibility(vehicle->IsTGT() ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+		TypeNameText->SetVisibility(ESlateVisibility::Hidden);
+	}
 
 	DistanceText->SetVisibility(ESlateVisibility::Hidden);
-	TypeNameText->SetVisibility(ally ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
-
 	SetNegative(Player->GetFireControlSystem()->GetMissileAimLayer());
 	SetColor(ally ? FLinearColor(0.0f, 1.0f, 1.0f, 1.0f) : FLinearColor::Green);
 

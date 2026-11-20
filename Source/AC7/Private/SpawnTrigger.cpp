@@ -206,6 +206,68 @@ void ASpawnTrigger::CreateInstance(int index, UObjectFactory* objectFactory, UTe
 	AntiRecursionCounter--;
 }
 
+#if WITH_EDITOR
+#include "GameMaster.h"
+#include "BluePrintCollector.h"
+USkeletalMesh* ASpawnTrigger::GetModel(UWorld* world, EVehicleID id)
+{
+	static TMap<EVehicleID, USkeletalMesh*> SkeletalMesh;
+
+	if (world == nullptr)
+		return nullptr;
+
+	USkeletalMesh*& mesh = SkeletalMesh.FindOrAdd(id);
+
+	if (!IsValid(mesh))
+	{
+		UBluePrintCollector* BluePrintCollector = NewObject<UBluePrintCollector>(this, bp);
+		if (!BluePrintCollector)
+			return nullptr;
+
+		TSubclassOf<AVehicleBase> SoftClass = BluePrintCollector->GetVehicleBluePrint(id);
+		AVehicleBase* classPtr = SoftClass->GetDefaultObject<AVehicleBase>();
+
+		if (classPtr == nullptr)
+			return nullptr;
+
+		USkeletalMeshComponent* component = Cast<USkeletalMeshComponent>(classPtr->GetRootComponent());
+
+		if (!component)
+		{
+			auto componentList = classPtr->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), TEXT("Body"));
+
+			if (!componentList.IsEmpty())
+				component = StaticCast<USkeletalMeshComponent*>(componentList[0]);
+
+			if (!component)
+				component = classPtr->FindComponentByClass<USkeletalMeshComponent>();
+
+			if (!component)
+			{
+				classPtr = world->SpawnActor<AVehicleBase>(SoftClass);
+
+				componentList = classPtr->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), TEXT("Body"));
+
+				if (!componentList.IsEmpty())
+					component = StaticCast<USkeletalMeshComponent*>(componentList[0]);
+
+				if (!component)
+					component = classPtr->FindComponentByClass<USkeletalMeshComponent>();
+
+				classPtr->Destroy();
+				if (!component)
+					return nullptr;
+			}
+		}
+
+
+		mesh = component->GetSkeletalMeshAsset();
+	}
+
+	return mesh;
+}
+#endif
+
 void ASpawnTrigger::UnionFind()
 {
 	TArray<int> parent;
@@ -239,11 +301,6 @@ void ASpawnTrigger::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-
-#if WITH_EDITOR
-	if (GetWorld()->WorldType == EWorldType::EditorPreview)
-		return;
-
 	for (auto& item : ActiveMesh)
 	{
 		if (!item.IsValid())
@@ -251,43 +308,47 @@ void ASpawnTrigger::OnConstruction(const FTransform& Transform)
 
 		item->DestroyComponent();
 	}
-
-	TArray<USceneComponent*> children;
-	RootComponent->GetChildrenComponents(true, children);
-
-	for (USceneComponent* Child : children)
-		if (IsValid(Child))
-			Child->DestroyComponent();
-
-	if (GetWorld()->WorldType == EWorldType::PIE)
-		return;
-
 	ActiveMesh.Empty();
-	if (PreviewMesh.IsNull())
-		return;
 
-	auto mesh = PreviewMesh.LoadSynchronous();
-	for (auto& item : list)
-	{
-		auto previewMesh = NewObject<USkeletalMeshComponent>(this, USkeletalMeshComponent::StaticClass());
-		if (previewMesh == nullptr)
-			return;
-
-		AddInstanceComponent(previewMesh);
-		previewMesh->SetupAttachment(RootComponent);
-		previewMesh->SetSkeletalMesh(mesh);
-		previewMesh->SetRelativeLocationAndRotation(item.LocalPosition, FRotator(item.LocalRotation.X, item.LocalRotation.Y, item.LocalRotation.Z));
-		previewMesh->RegisterComponent();
-
-		ActiveMesh.Add(previewMesh);
-	}
-#else
 	TArray<USceneComponent*> children;
 	RootComponent->GetChildrenComponents(true, children);
-
 	for (USceneComponent* Child : children)
 		if (IsValid(Child))
 			Child->DestroyComponent();
-#endif
 
+#if WITH_EDITOR
+	UWorld* world = GetWorld();
+	if (world == nullptr || world->WorldType == EWorldType::EditorPreview)
+		return;
+	if (world->WorldType != EWorldType::PIE)
+	{
+		for (auto& item : list)
+		{
+			auto previewMesh = NewObject<USkeletalMeshComponent>(this, USkeletalMeshComponent::StaticClass());
+			if (previewMesh == nullptr)
+				return;
+			auto mesh = GetModel(world, item.VehicleID);
+			AddInstanceComponent(previewMesh);
+			previewMesh->SetupAttachment(RootComponent);
+			previewMesh->SetSkeletalMesh(mesh);
+			previewMesh->RegisterComponent();
+
+			if (item.bPlaceLowestStaticMesh)
+			{
+				FCollisionQueryParams Params;
+				Params.bTraceComplex = true;
+				Params.AddIgnoredComponent(previewMesh);
+				Params.AddIgnoredActor(this);
+
+				FVector spawnerLocation = GetActorLocation();
+				FVector position = FSpawnInfomation::CalculateFloor(world, item.LocalPosition + spawnerLocation, Params);
+				previewMesh->SetRelativeLocationAndRotation(position - spawnerLocation, FRotator(item.LocalRotation.X, item.LocalRotation.Y, item.LocalRotation.Z));
+			}
+			else
+				previewMesh->SetRelativeLocationAndRotation(item.LocalPosition, FRotator(item.LocalRotation.X, item.LocalRotation.Y, item.LocalRotation.Z));
+
+			ActiveMesh.Add(previewMesh);
+		}
+	}
+#endif
 }

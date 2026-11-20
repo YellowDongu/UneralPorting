@@ -93,6 +93,9 @@ void USpawnHandler::OnWorldBeginPlay(UWorld& InWorld)
 
 		for (auto& item : (*iterator)->GetNextTriggers())
 		{
+			if (item->IsActived())
+				continue;
+
 			StandbyList.Remove(item);
 			ActiveList.Add(item);
 			UE_LOG(LogTemp, Error, TEXT("[ASpawnTrigger::OnWorldBeginPlay] %s Actived"), *item->GetName());

@@ -37,6 +37,8 @@ void APlayerPilot::BeginPlay(void)
 {
     Super::BeginPlay();
 
+    check(Aircraft.Get());
+
     USoundSubsystem* soundSubsystem = GetGameInstance()->GetSubsystem<USoundSubsystem>();
     ShootSound = soundSubsystem->GetSound(TEXT("MissileFired"));
 

@@ -1,7 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "ObjectFactory.h"
+
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
+#include "NiagaraParameterStore.h"
+#include "NiagaraFunctionLibrary.h"
+
 #include "Aircraft.h"
 #include "BluePrintCollector.h"
 #include "PlayerPilot.h"
@@ -14,11 +17,6 @@
 #include "AIAircraftPilot.h"
 #include "TeamManagementSystem.h"
 #include "SoundSubsystem.h"
-
-#include "NiagaraComponent.h"
-#include "NiagaraSystem.h"
-#include "NiagaraParameterStore.h"
-#include "NiagaraFunctionLibrary.h"
 
 void UObjectFactory::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -74,7 +72,8 @@ TWeakObjectPtr<AFlare> UObjectFactory::GetFlare(AVehicleBase* shooter, USceneCom
 	check(newInstance.Get());
 	check(flarePod);
 
-	newInstance->Shoot(flarePod, shooter->GetActorForwardVector() * velocity + flarePod->GetForwardVector() * ConvertFromVelocity(330.0f));
+	//newInstance->Shoot(flarePod, shooter->GetActorForwardVector() * velocity);
+	newInstance->Shoot(shooter, flarePod, velocity);
 	return newInstance;
 }
 
@@ -134,7 +133,7 @@ TWeakObjectPtr<class AVehicleBase> UObjectFactory::Instantiate(FSpawnInfomation&
 		if (newInstance == nullptr) return nullptr;
 
 #ifdef BlockAISpecial
-		spawnInfomation.SpecialWeapon = -1; // block Special
+		spawnInfomation.SpecialWeapon = EWeaponID::END; // block Special
 #endif
 		newInstance->SystemInitialize(spawnInfomation);
 

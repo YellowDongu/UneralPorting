@@ -35,6 +35,7 @@ void AMissile::Initialize(AMissile* origin, TWeakObjectPtr<class AVehicleBase> o
     SetActorLocationAndRotation(origin->GetActorLocation(), origin->GetActorRotation(), true);
     bIsProjectile = true;
     FlyDistance = MaxRange * 1.5f;
+    AgilityTimer = 0.0f;
     //Trail->ReinitializeSystem();
     if (IsValid(Trail))
         Trail->Activate();
@@ -197,7 +198,7 @@ void AMissile::TrackEnemy(float deltaTime)
         Release();
         return;
     }
-
+    AgilityTimer = FMath::Min(AgilityTimer + deltaTime, AgilityBonusTime);
     float distance = ConvertFromVelocity(velocity) * deltaTime;
     FlyDistance -= distance;
 
@@ -226,7 +227,7 @@ void AMissile::TrackEnemy(float deltaTime)
         Release();
     }
     else
-        SetActorRotation(FMath::RInterpTo(CurrentRotation, vector.Rotation(), deltaTime, rotationSpeed));
+        SetActorRotation(FMath::RInterpTo(CurrentRotation, vector.Rotation(), deltaTime, rotationSpeed * FMath::Lerp(1.0f, AgilityBonus, AgilityTimer / AgilityBonusTime)));
 }
 
 void AMissile::ResetMissileBind()

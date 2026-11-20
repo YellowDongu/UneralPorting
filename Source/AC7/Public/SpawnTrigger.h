@@ -121,15 +121,21 @@ public:
 	ASpawnTrigger();
 
 	virtual void OnConstruction(const FTransform& Transform) override;
-	//virtual void BeginPlay() override;
-	virtual void PostInitializeComponents() override;
+	virtual void PostInitializeComponents(void) override;
+	//virtual void BeginPlay(void) override;
 	
 	bool Update(float DeltaTime);
 	void Active(UWorld* world);
 
 	const TArray<TObjectPtr<ASpawnTrigger>>& GetNextTriggers(void) { return NextTriggers; }
 	ESpawnConditionType GetSpawnCondition(void) { return SpawnCondition; }
+	bool IsActiveReady(void){ return bActiveReady; }
+	bool IsActived(void){ return bIsActive; }
 private:
+#if WITH_EDITOR
+	USkeletalMesh* GetModel(UWorld* world, EVehicleID id);
+#endif
+
 	TSharedPtr<USpawnCondition> CreateSpawnCondition();
 	void CreateInstance(int index, class UObjectFactory* objectFactory, class UTeamManagementSystem* teamSystem, TArray<TWeakObjectPtr<class AVehicleBase>>& instanceList);
 	void UnionFind();
@@ -155,4 +161,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = "DEBUG", meta = (AllowPrivateAccess = "true"))
 	TSoftObjectPtr<USkeletalMesh> PreviewMesh;
 	TArray<TWeakObjectPtr<USkeletalMeshComponent>> ActiveMesh;
+
+	UPROPERTY(EditAnywhere, Category = "DEBUG", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<class UBluePrintCollector> bp;
 };

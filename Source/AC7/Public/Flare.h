@@ -31,6 +31,7 @@ public:
 	void Disappear();
 	void RetriveObject();
 	void Shoot(USceneComponent* flarePod, const FVector& DirectionVector = FVector::ZeroVector);
+	void Shoot(AVehicleBase* shooter, USceneComponent* flarePod, float velocity);
 private:
 	float LifeTime{ 5.0f }, CurrentLifeTime{0.0f};
 	double MinimumSpeed{50.0f}, ShootSpeed{ 330.0f }, CurrentSpeed;

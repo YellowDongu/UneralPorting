@@ -172,3 +172,29 @@ void FTargetInfo::CalculateDistance(const FVector& position, bool isWorldPositio
 
 	Distance = FMath::Sqrt(Distance);
 }
+
+FVector FSpawnInfomation::CalculateFloor(UWorld* World, const FVector& Start, const FCollisionQueryParams& Params)
+{
+	double TraceDistance = ConvertToAltitude(40000.0f);
+
+	if (World == nullptr)
+		return FVector::ZeroVector;
+
+	FVector End = Start - FVector(0.0, 0.0, TraceDistance);
+
+	TArray<FHitResult> HitResults;
+
+	World->LineTraceMultiByChannel(HitResults, Start, End, ECC_Visibility, Params);
+
+	FHitResult* LowestHit = nullptr;
+
+	for (FHitResult& Hit : HitResults)
+	{
+		if (!Cast<UStaticMeshComponent>(Hit.GetComponent()))
+			continue;
+
+		LowestHit = &Hit;
+	}
+
+	return LowestHit == nullptr ? Start : LowestHit->ImpactPoint;
+}
