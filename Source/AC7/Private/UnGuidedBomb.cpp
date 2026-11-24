@@ -6,7 +6,6 @@
 
 #include "ObjectFactory.h"
 #include "Aircraft.h"
-#include "DrawDebugHelpers.h"
 #include "FireControlSystem.h"
 
 AUnGuidedBomb::AUnGuidedBomb()
@@ -150,9 +149,11 @@ void AUnGuidedBomb::Explode()
     TArray<FOverlapResult> list;
     world->OverlapMultiByObjectType(list, location, FQuat::Identity, ObjectParams, FCollisionShape::MakeSphere(BlastArea));
 
+#ifdef DebugDrawActived
     DrawDebugSphere(world, location, BlastArea, 8, FColor::Red, false, 10.0f);
     DrawDebugSphere(world, location, BlastArea * 0.6f, 8, FColor::Red, false, 10.0f);
     DrawDebugSphere(world, location, BlastArea * 0.2f, 8, FColor::Red, false, 10.0f);
+#endif
 
     TSet<AVehicleBase*> hitted;
 

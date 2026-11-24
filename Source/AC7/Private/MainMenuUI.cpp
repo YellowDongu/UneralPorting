@@ -36,9 +36,12 @@ void UMainMenuUI::NativeConstruct()
 	Selected = sound->GetSound(TEXT("MenuSelected"));
 	MenuChange = sound->GetSound(TEXT("MenuChange"));
 	MenuCancel = sound->GetSound(TEXT("MenuCancel"));
-	MainBGM = sound->GetSound(TEXT("main"));
 
-	USoundWave* SoundWave = Cast<USoundWave>(MainBGM);
+	MainBGM = MakeShared<FSoundSet>();
+	MainBGM->Initialize(TEXT("main"), TEXT("BGMChannel"), sound);
+
+
+	USoundWave* SoundWave = Cast<USoundWave>(MainBGM->Sound);
 	if (SoundWave != nullptr)
 	{
 		SoundWave->bLooping = 1;
@@ -187,10 +190,10 @@ void UMainMenuUI::TransitLevel(void)
 	if (levelName.IsEmpty())
 		return;
 
+	Deactive();
 	UE_LOG(LogTemp, Error, TEXT("[UMainMenuUI::TransitLevel] %s Level reserved"), *levelName);
 	gameMaster->ReserveLevel(levelName);
 	stageChangeUIUnit->FadeOut(true, 2.5f);
-	Deactive();
 
 	TArray<FSoftObjectPath> pathList;
 	pathList.Reserve(vehicleCount);
@@ -223,20 +226,11 @@ void UMainMenuUI::TransitLevel(void)
 void UMainMenuUI::Active(void)
 {
 	bActive = true;
-	TWeakObjectPtr<UAudioComponent> channel = GetGameInstance()->GetSubsystem<USoundSubsystem>()->GetChannel(TEXT("BGMChannel"));
-
-	if(channel->IsPlaying())
-		channel->Stop();
-
-	channel->SetSound(MainBGM);
-	channel->Play();
+	MainBGM->Play();
 }
 
 void UMainMenuUI::Deactive(void)
 {
 	bActive = false;
-	TWeakObjectPtr<UAudioComponent> channel = GetGameInstance()->GetSubsystem<USoundSubsystem>()->GetChannel(TEXT("BGMChannel"));
-
-	if (channel->IsPlaying())
-		channel->FadeOut(1.0f, 0.0f);
+	MainBGM->Stop();
 }

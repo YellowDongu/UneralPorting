@@ -13,6 +13,7 @@
 
 #define MapEditMode
 #define BlockAISpecial
+//#define DebugDrawActived
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FTickEvent, float);
 //DECLARE_DELEGATE_RetVal_OneParam(float, FCalculateThrottle, float);

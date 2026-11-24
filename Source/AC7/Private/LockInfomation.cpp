@@ -460,13 +460,9 @@ void SAAMLockIndicator::Initialize(IndicatorCreationData& data)
 
 void SAAMLockIndicator::Update(float deltaTime, FTargetInfo* target)
 {
-	if (!target->Target.IsValid() || target->Lock >= 0.99f)
-	{
-		SetActive(false);
-		return;
-	}
+	RangeIndicator->SetActorLocationAndRotation(Owner->GetActorLocation(), Owner->GetActorRotation());
 
-	if (target == nullptr)
+	if (target == nullptr || !target->Target.IsValid() || target->Lock >= 0.99f)
 	{
 		LockIndicator::SetActive(false);
 		return;
@@ -475,17 +471,16 @@ void SAAMLockIndicator::Update(float deltaTime, FTargetInfo* target)
 	LockIndicator::SetActive(true);
 	LockIndicator::Update(deltaTime, target);
 
-	RangeIndicator->SetActorLocationAndRotation(Owner->GetActorLocation(), Owner->GetActorRotation());
 }
 
 void SAAMLockIndicator::SetActive(bool value)
 {
-	if (bIsActive == value)
+	if (bIsActive == value && bIsActive == RangeIndicator->IsHidden())
 		return;
 
 	LockIndicator::SetActive(value);
-	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Set Special : %d"), bIsActive);
 	RangeIndicator->SetActorHiddenInGame(!bIsActive);
+	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Set Special : %d"), bIsActive);
 	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Active : %d"), static_cast<int>(LockRectangle->GetVisibility()));
 	//UE_LOG(LogTemp, Error, TEXT("[SAAMLockIndicator::SetActive] Active : %d"), static_cast<int>(RangeIndicator->IsHidden()));
 	//RangeIndicator->SetVisibility(bIsActive ? ESlateVisibility::Visible : ESlateVisibility::Hidden);

@@ -326,7 +326,7 @@ void UFireControlSystem::RefreshSubTargets(void)
 		//SetSelectTargetUI.Broadcast(targetInfo.Target.Get(), true);
 	}
 
-	if constexpr (bInsertMode)
+	if constexpr (!bInsertMode)
 		return;
 
 	if (currentTargets.Num() >= MultiShoot)

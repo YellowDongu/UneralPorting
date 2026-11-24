@@ -3,14 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "VehicleBase.h"
 #include "Defined.h"
 
 #include "Aircraft.generated.h"
-
-/**
- *
- */
 
 /**
  * 
@@ -41,11 +38,12 @@ public:
 	virtual void SetMoveable(bool active) override;
 
 	//FireControlSystem
-	inline void ChangeTarget(void);
+	inline bool ShootGun(void);
 	inline bool ShootMissile(TArray<int>& output);
 	inline bool ChangeMissile(void);
 	inline bool ShootMissile(void);
-	inline bool ShootGun(void);
+
+	inline void ChangeTarget(void);
 	inline void SetTarget(const TWeakObjectPtr<class AVehicleBase>& target);
 
 	inline const TArray<FTargetInfo>& GetSelectedTargets(void) const;
@@ -53,10 +51,11 @@ public:
 	inline int GetSpecial(void) const;
 
 	//Radar
-	inline void StartDeployFlare();
-	inline float GetRaderDistance() const;
+	inline void StartDeployFlare(void);
+	inline float GetRaderDistance(void) const;
 	inline const TSet<TWeakObjectPtr<class AVehicleBase>>& GetInRadarTargets() const;
 
+	//AircraftAnimator
 	inline void SetGear(bool value, bool instantSet = false);
 	inline void DeployGear(bool instantSet = false);
 

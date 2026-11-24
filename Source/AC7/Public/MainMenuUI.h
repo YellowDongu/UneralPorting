@@ -48,7 +48,6 @@ private:
 	UPROPERTY() TObjectPtr<USoundBase> Selected{ nullptr };
 	UPROPERTY() TObjectPtr<USoundBase> MenuChange{ nullptr };
 	UPROPERTY() TObjectPtr<USoundBase> MenuCancel{ nullptr }; // 이렇게 쓰는 편이 좋나?
-	UPROPERTY() TObjectPtr<USoundBase> MainBGM{ nullptr };
-	
-
+	//UPROPERTY() TObjectPtr<USoundBase> MainBGM{ nullptr };
+	TSharedPtr<struct FSoundSet> MainBGM{ nullptr };
 };

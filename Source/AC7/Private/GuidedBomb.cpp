@@ -126,10 +126,11 @@ void AGuidedBomb::Explode()
     TArray<FOverlapResult> list;
     world->OverlapMultiByObjectType(list, TrackedPosition, FQuat::Identity, ObjectParams, FCollisionShape::MakeSphere(BlastArea));
 
+#ifdef DebugDrawActived
     DrawDebugSphere(world, TrackedPosition, BlastArea, 8, FColor::Red, false, 10.0f);
     DrawDebugSphere(world, TrackedPosition, BlastArea * 0.6f, 8, FColor::Red, false, 10.0f);
     DrawDebugSphere(world, TrackedPosition, BlastArea * 0.2f, 8, FColor::Red, false, 10.0f);
-
+#endif
     TSet<AVehicleBase*> hitted;
 
     for (auto& item : list)

@@ -1,10 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "Bullet.h"
-#include "ObjectFactory.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
+
+#include "Missile.h"
+#ifdef DebugDrawActived
+#include "DrawDebugHelpers.h"
+#endif
+
+#include "ObjectFactory.h"
 #include "VehicleBase.h"
 
 ABullet::ABullet()
@@ -43,6 +49,9 @@ void ABullet::Tick(float DeltaTime)
         return;
     }
 
+#ifdef DebugDrawActived
+    DrawDebugSphere(GetWorld(), GetActorLocation(), 500.0 * 0.2f, 8, FColor::Red, false, 0.1f);
+#endif
     //CurrentSpeed = FMath::Lerp(ShootSpeed, MinimumSpeed, 1.0f - CurrentLifeTime / LifeTime);
     //FVector Direction = GetActorForwardVector();
     //SetActorLocation(GetActorLocation() + Direction * CurrentSpeed * DeltaTime);
@@ -137,6 +146,6 @@ void ABullet::Shoot(const FVector& position, const FRotator& rotation, float vel
     SetActorTickEnabled(true);
 
     SetActorLocationAndRotation(position, rotation);
-    Body->AddImpulse(GetActorForwardVector() * velocity * 50.0f);
+    Body->AddImpulse(GetActorForwardVector() * (ConvertFromVelocity(2000.0f) + velocity));
     //UE_LOG(LogTemp, Error, TEXT("[ABullet::Shoot] %3f : %3f : %3f / %3f : %3f : %3f"), position.X, position.Y, position.Z, Body->GetPhysicsLinearVelocity().X, Body->GetPhysicsLinearVelocity().Y, Body->GetPhysicsLinearVelocity().Z);
 }

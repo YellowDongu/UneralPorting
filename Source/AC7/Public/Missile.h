@@ -3,12 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "GameFramework/Actor.h"
 #include "Defined.h"
+#ifdef DebugDrawActived
+#include "DrawDebugHelpers.h"
+#endif
+
 #include "Missile.generated.h"
 
+
 UCLASS(Abstract)
-class AC7_API AMissile : public AActor
+class AC7_API AMissile : public AActor // 매우 큰 실수 이름을 AWeapon으로 했어야했는데
 {
 	GENERATED_BODY()
 public:
@@ -54,7 +60,7 @@ public:
 protected:
     bool bIsCoolTime{ false }, bIsProjectile{ false };
     float Time{ 0.0f }, DistanceSquare{ 0.0f }, AngleCos{ 0.0f }, FlyDistance{ TNumericLimits<float>::Max() }, AgilityTimer{ 0.0f };
-    double ImpactDistance{ 250.0 }; // squared at runtime
+    double ImpactDistance{ 200.0 }; // squared at runtime
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     EWeaponID MissileID{ EWeaponID::NULLID };
@@ -75,7 +81,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     float lockSpeed = 1.0f;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
-    float AgilityBonus = 3.0f;
+    float AgilityBonus{ 5.0f };
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))
     float AgilityBonusTime{ 1.0f };
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "SPEC", meta = (AllowPrivateAccess = "true"))

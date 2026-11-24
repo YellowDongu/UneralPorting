@@ -3,7 +3,6 @@
 #include "Flare.h"
 #include "ObjectFactory.h"
 //#include "NiagaraSystem.h"
-//#include "Defined.h"
 //#include "NiagaraParameterStore.h"
 
 AFlare::AFlare()

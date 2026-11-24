@@ -23,8 +23,8 @@ void USoundSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
     for (const FAssetData& Asset : foundedAssets)
     {
-        TSoftObjectPtr<USoundBase> Sound(Asset.ToSoftObjectPath());
-        SoundAssets.Add(Asset.AssetName.ToString(), MoveTemp(Sound));
+        TSoftObjectPtr<USoundBase> sound(Asset.ToSoftObjectPath());
+        SoundAssets.Add(Asset.AssetName.ToString(), sound);
     }
 }
 
@@ -129,14 +129,19 @@ TWeakObjectPtr<UAudioComponent> USoundSubsystem::GetChannel(const FString& name,
 {
     TObjectPtr<UAudioComponent>& output = Channels.FindOrAdd(name);
 
-    if (output == nullptr)
+    if (!IsValid(output))
     {
         output = NewObject<UAudioComponent>(this);
         output->bAutoActivate = false;
     }
 
-    if (!output->IsRegistered() || IsValid(output->GetWorld()))
+    if (!output->IsRegistered())
         output->RegisterComponentWithWorld(world);
+    else if(!IsValid(output->GetWorld()) || output->GetWorld() != world)
+    {
+        output->UnregisterComponent();
+        output->RegisterComponentWithWorld(world);
+    }
 
     return TWeakObjectPtr<UAudioComponent>(output.Get());
 }
@@ -147,22 +152,10 @@ void FSoundSet::Initialize(const FString& soundName, const FString& channelName,
         return;
 
     Channel = sound->GetChannel(channelName, world);
-
-    if (!Channel->IsRegistered())
-        Channel->RegisterComponentWithWorld(world);
-
     ChangeSound(sound->GetSound(soundName));
 }
 
-void FSoundSet::Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound)
-{
-    Channel = sound->GetChannel(channelName, sound->GetWorld());
-
-    if (!Channel->IsRegistered())
-        Channel->RegisterComponentWithWorld(sound->GetWorld());
-
-    ChangeSound(sound->GetSound(soundName));
-}
+void FSoundSet::Initialize(const FString& soundName, const FString& channelName, USoundSubsystem* sound) { Initialize(soundName, channelName, sound, sound->GetWorld()); }
 
 void FSoundSet::BlinkSound(float maxTime, float deltaTime)
 {
